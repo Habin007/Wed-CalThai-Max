@@ -1,0 +1,2197 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#059669" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="CalThai Max" />
+  <title>CalThai Max — แอปควบคุมแคลอรี่อาหารไทย (คิดค่าสูงสุด)</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --nav-bottom-offset: 54px;
+    }
+    * {
+      font-family: 'Noto Sans Thai', 'Inter', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      box-sizing: border-box;
+    }
+    body {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      min-height: 100dvh;
+      color: #0f172a;
+    }
+    .android-shell {
+      width: 100%;
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100vh;
+      min-height: 100dvh;
+      background: #f8fafc;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.55);
+      overflow-x: hidden;
+    }
+    .android-shell.wide-mode {
+      max-width: 960px;
+    }
+    @media (min-width: 640px) {
+      body {
+        padding: 16px 0;
+      }
+      .android-shell {
+        min-height: calc(100vh - 32px);
+        border-radius: 32px;
+        border: 6px solid #334155;
+      }
+    }
+    /* Floating Bottom Navigation lifted well above Android Back/Home/Recents bar */
+    .floating-bottom-nav {
+      bottom: calc(env(safe-area-inset-bottom, 0px) + var(--nav-bottom-offset));
+      transition: bottom 0.25s ease, max-width 0.25s ease;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    @keyframes pulse-danger {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.45); }
+      50% { transform: scale(1.015); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+    }
+    .danger-pulse {
+      animation: pulse-danger 2s infinite;
+    }
+    .ring-progress {
+      transition: stroke-dashoffset 0.55s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.35s ease;
+    }
+    .tab-view {
+      display: none;
+    }
+    .tab-view.active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div id="appShell" class="android-shell">
+    <!-- Android Status Bar -->
+    <div class="bg-emerald-700 text-white px-4 py-1.5 flex items-center justify-between text-xs font-medium select-none">
+      <div class="flex items-center gap-2">
+        <span class="inline-block w-2 h-2 rounded-full bg-emerald-300 animate-pulse"></span>
+        <span>CalThai Max • <span id="streakHeaderBadge">🔥 คุมแคล 5 วันติด</span></span>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="btnCycleNavHeight" type="button" onclick="cycleBottomNavOffset()" class="inline-flex items-center gap-1 bg-emerald-800/90 hover:bg-emerald-900 px-2 py-0.5 rounded text-[11px] font-semibold transition" title="ปรับความสูงแถบล่างหนีปุ่มโฮมโทรศัพท์">
+          <span>⬆️ ยกแถบล่าง: <span id="navOffsetLabel">สูง</span></span>
+        </button>
+        <button id="btnToggleWidth" type="button" onclick="toggleShellWidth()" class="hidden sm:inline-flex items-center gap-1 bg-emerald-800/80 hover:bg-emerald-900 px-2 py-0.5 rounded text-[11px] transition" title="สลับขนาดหน้าจอมือถือ/แท็บเล็ต">
+          <span>📱 สลับจอ</span>
+        </button>
+        <span id="statusBarTime">20:58</span>
+      </div>
+    </div>
+
+    <!-- App Header -->
+    <header class="bg-gradient-to-r from-emerald-600 via-emerald-600 to-teal-600 text-white px-4 pt-3 pb-3 shadow-md sticky top-0 z-30">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-lg font-bold tracking-tight">CalThai Max</h1>
+            <span class="bg-amber-400 text-slate-900 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">คิดแคลสูงสุด</span>
+          </div>
+          <p class="text-xs text-emerald-100 mt-0.5">ควบคุมแคลอรี่ต่อวัน • รวมแกงไทย & อาหารฮิตครบ</p>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <button id="btnOpenCustomFood" type="button" onclick="openCustomFoodModal()" class="bg-white/15 hover:bg-white/25 text-white text-xs font-medium px-2.5 py-1.5 rounded-xl flex items-center gap-1 transition">
+            <span>➕ เพิ่มเมนูเอง</span>
+          </button>
+          <button id="btnOpenApkGuide" type="button" onclick="openApkModal()" class="bg-amber-400 hover:bg-amber-300 text-slate-900 text-xs font-bold px-2.5 py-1.5 rounded-xl flex items-center gap-1 shadow-sm transition">
+            <span>📲 ติดตั้งแอป</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Date Selector Bar (ดูย้อนหลังได้) -->
+      <div class="mt-2.5 bg-emerald-800/40 rounded-2xl p-1.5 flex items-center justify-between gap-1">
+        <button id="btnPrevDay" type="button" onclick="changeSelectedDate(-1)" class="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-white font-bold transition" title="วันก่อนหน้า">
+          ◀
+        </button>
+        <div class="flex items-center gap-2 flex-1 justify-center">
+          <span class="text-xs font-medium text-emerald-100">📅 วันที่:</span>
+          <input id="datePickerInput" type="date" onchange="onDateInputChange(this.value)" class="bg-white/15 text-white text-xs font-semibold px-2.5 py-1 rounded-lg border border-white/20 focus:outline-none" />
+          <button id="btnGoToday" type="button" onclick="goToToday()" class="bg-emerald-400/25 hover:bg-emerald-400/40 text-white text-[11px] font-semibold px-2 py-1 rounded-lg transition">
+            วันนี้
+          </button>
+        </div>
+        <button id="btnNextDay" type="button" onclick="changeSelectedDate(1)" class="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-white font-bold transition" title="วันถัดไป">
+          ▶
+        </button>
+      </div>
+
+      <!-- Top Quick Navigation Pills (ช่วยให้กดสลับหน้าได้แม้ถือมือเดียวหรือไม่อยากเอื้อมลงล่าง) -->
+      <div class="mt-2 grid grid-cols-4 gap-1 bg-emerald-900/35 p-1 rounded-2xl">
+        <button type="button" id="top-nav-home" onclick="switchTab('home')" class="top-nav-btn py-1 rounded-xl text-[11px] font-bold bg-white text-emerald-800 shadow-sm transition">🏠 หน้าหลัก</button>
+        <button type="button" id="top-nav-menu" onclick="switchTab('menu')" class="top-nav-btn py-1 rounded-xl text-[11px] font-medium text-emerald-100 hover:bg-white/10 transition">🍲 หมวดอาหาร</button>
+        <button type="button" id="top-nav-stats" onclick="switchTab('stats')" class="top-nav-btn py-1 rounded-xl text-[11px] font-medium text-emerald-100 hover:bg-white/10 transition">📊 กราฟสถิติ</button>
+        <button type="button" id="top-nav-settings" onclick="switchTab('settings')" class="top-nav-btn py-1 rounded-xl text-[11px] font-medium text-emerald-100 hover:bg-white/10 transition">⚙️ ตั้งค่าลิมิต</button>
+      </div>
+    </header>
+
+    <!-- Main Content Container (Extra bottom padding so nothing is ever blocked by Android navigation bar) -->
+    <main class="flex-1 pb-44 px-3.5 pt-3.5 space-y-4 overflow-y-auto">
+
+      <!-- ==================== TAB 1: หน้าหลัก & บันทึกด่วน ==================== -->
+      <section id="view-home" class="tab-view active space-y-4">
+
+        <!-- Over-Calorie / Status Alert Banner (คำเตือนเกินแคลต่อวัน) -->
+        <div id="calorieAlertBanner" class="hidden rounded-2xl p-3.5 border transition-all"></div>
+
+        <!-- Donut Chart Card (กราฟวงกลม + แถบสีบอกลิมิตต่อวัน) -->
+        <div class="bg-white rounded-3xl p-4 shadow-sm border border-slate-100">
+          <div class="flex items-center justify-between mb-2">
+            <div>
+              <h2 class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                <span>🎯 สรุปแคลอรี่รายวัน</span>
+                <span id="selectedDateBadge" class="text-[11px] font-medium bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">วันนี้</span>
+              </h2>
+              <p class="text-[11px] text-slate-500">คำนวณค่าแคลอรี่สูงสุด (Max Estimate) เพื่อป้องกันแคลแฝง</p>
+            </div>
+            <button id="btnEditGoalQuick" type="button" onclick="switchTab('settings')" class="text-xs font-semibold text-emerald-600 hover:text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-xl transition">
+              ⚙️ เป้าหมาย: <span id="goalHeaderValue">2,000</span> kcal
+            </button>
+          </div>
+
+          <!-- SVG Donut Ring + Live Stats -->
+          <div class="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center mt-2">
+            <div class="sm:col-span-5 flex flex-col items-center justify-center relative">
+              <div class="relative w-48 h-48 flex items-center justify-center">
+                <svg class="w-48 h-48 -rotate-90" viewBox="0 0 200 200">
+                  <!-- Background Track -->
+                  <circle cx="100" cy="100" r="78" fill="none" stroke="#f1f5f9" stroke-width="20" />
+                  <!-- Main Calorie Ring -->
+                  <circle id="donutMainArc" class="ring-progress" cx="100" cy="100" r="78" fill="none" stroke="#10b981" stroke-width="20" stroke-linecap="round" stroke-dasharray="490.09" stroke-dashoffset="490.09" />
+                  <!-- Over-limit Warning Outer Ring -->
+                  <circle id="donutOverArc" class="ring-progress" cx="100" cy="100" r="92" fill="none" stroke="#dc2626" stroke-width="6" stroke-linecap="round" stroke-dasharray="578.05" stroke-dashoffset="578.05" opacity="0" />
+                </svg>
+                <!-- Center Readout -->
+                <div class="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
+                  <span id="donutStatusTag" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 mb-0.5">ยังอยู่ในเกณฑ์ดี</span>
+                  <div class="text-2xl font-extrabold text-slate-800 leading-tight">
+                    <span id="donutConsumedKcal">0</span>
+                  </div>
+                  <div class="text-[11px] text-slate-400 font-medium">
+                    จากลิมิต <span id="donutGoalKcal">2,000</span> kcal
+                  </div>
+                  <div id="donutRemainText" class="text-xs font-bold text-emerald-600 mt-1">
+                    เหลืออีก 2,000 kcal
+                  </div>
+                </div>
+              </div>
+
+              <!-- Horizontal Color Limit Bar -->
+              <div class="w-full mt-2">
+                <div class="flex justify-between text-[11px] font-semibold mb-1">
+                  <span class="text-slate-500">แถบวัดระดับลิมิตต่อวัน</span>
+                  <span id="limitPercentLabel" class="text-emerald-600 font-bold">0%</span>
+                </div>
+                <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200">
+                  <div id="limitColorBar" class="h-full rounded-full transition-all duration-500 bg-emerald-500" style="width: 0%"></div>
+                </div>
+                <div class="flex justify-between text-[10px] text-slate-400 mt-1">
+                  <span>🟢 ปกติ (0-75%)</span>
+                  <span>🟡 ใกล้ลิมิต (76-99%)</span>
+                  <span>🔴 เกินลิมิต (100%+)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Side Breakdown & Macros -->
+            <div class="sm:col-span-7 space-y-3">
+              <div class="grid grid-cols-3 gap-2 text-center">
+                <div class="bg-slate-50 rounded-2xl p-2.5 border border-slate-100">
+                  <div class="text-[11px] text-slate-500">กินไปแล้ว</div>
+                  <div id="statEatenKcal" class="text-base font-bold text-slate-800">0</div>
+                  <div class="text-[10px] text-slate-400">kcal (ค่าสูงสุด)</div>
+                </div>
+                <div class="bg-emerald-50/70 rounded-2xl p-2.5 border border-emerald-100">
+                  <div class="text-[11px] text-emerald-700">เผาผลาญเสริม</div>
+                  <div id="statBurnedKcal" class="text-base font-bold text-emerald-600">0</div>
+                  <div class="text-[10px] text-emerald-600/80">kcal (ออกกำลัง)</div>
+                </div>
+                <div id="netCalorieBox" class="bg-amber-50/80 rounded-2xl p-2.5 border border-amber-100">
+                  <div class="text-[11px] text-amber-800">แคลสุทธิ</div>
+                  <div id="statNetKcal" class="text-base font-bold text-amber-700">0</div>
+                  <div class="text-[10px] text-amber-700/80">กิน - ออกกำลัง</div>
+                </div>
+              </div>
+
+              <!-- Macros Bars -->
+              <div class="bg-slate-50 rounded-2xl p-3 space-y-2 border border-slate-100">
+                <div class="text-xs font-bold text-slate-700 flex items-center justify-between">
+                  <span>สารอาหารที่ได้รับวันนี้</span>
+                  <span id="macroSodiumText" class="text-[11px] font-medium text-slate-500">โซเดียม: 0 mg</span>
+                </div>
+                <div class="grid grid-cols-3 gap-2.5">
+                  <div>
+                    <div class="flex justify-between text-[11px] mb-1">
+                      <span class="font-medium text-slate-600">🥩 โปรตีน</span>
+                      <span id="macroProteinVal" class="font-bold text-blue-600">0g</span>
+                    </div>
+                    <div class="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                      <div id="macroProteinBar" class="h-full bg-blue-500 rounded-full transition-all" style="width: 0%"></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="flex justify-between text-[11px] mb-1">
+                      <span class="font-medium text-slate-600">🍚 คาร์บ</span>
+                      <span id="macroCarbVal" class="font-bold text-amber-600">0g</span>
+                    </div>
+                    <div class="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                      <div id="macroCarbBar" class="h-full bg-amber-500 rounded-full transition-all" style="width: 0%"></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="flex justify-between text-[11px] mb-1">
+                      <span class="font-medium text-slate-600">🥑 ไขมัน</span>
+                      <span id="macroFatVal" class="font-bold text-rose-600">0g</span>
+                    </div>
+                    <div class="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                      <div id="macroFatBar" class="h-full bg-rose-500 rounded-full transition-all" style="width: 0%"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Quick Meal Type Selector -->
+              <div class="flex items-center justify-between gap-1.5 bg-slate-100 p-1 rounded-2xl">
+                <button type="button" data-meal="breakfast" onclick="setActiveMeal('breakfast')" class="meal-pill flex-1 py-1.5 rounded-xl text-xs font-semibold transition bg-white text-emerald-700 shadow-sm">🌅 เช้า</button>
+                <button type="button" data-meal="lunch" onclick="setActiveMeal('lunch')" class="meal-pill flex-1 py-1.5 rounded-xl text-xs font-semibold transition text-slate-600">☀️ กลางวัน</button>
+                <button type="button" data-meal="dinner" onclick="setActiveMeal('dinner')" class="meal-pill flex-1 py-1.5 rounded-xl text-xs font-semibold transition text-slate-600">🌙 เย็น</button>
+                <button type="button" data-meal="snack" onclick="setActiveMeal('snack')" class="meal-pill flex-1 py-1.5 rounded-xl text-xs font-semibold transition text-slate-600">🧋 ของว่าง</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Smart Autocomplete Search Box (พิมพ์ตัวเดียวรู้เรื่อง + กดบันทึกทันที) -->
+        <div class="bg-white rounded-3xl p-4 shadow-sm border border-emerald-100 relative">
+          <div class="flex items-center justify-between mb-2">
+            <label for="quickSearchInput" class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+              <span>🔍 ค้นหาเมนูที่กินแล้วกดบันทึก</span>
+            </label>
+            <span class="text-[11px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-medium">พิมพ์แค่ 1 ตัวอักษรก็ขึ้นเมนูแนะนำ!</span>
+          </div>
+
+          <div class="relative">
+            <input
+              id="quickSearchInput"
+              type="text"
+              autocomplete="off"
+              oninput="onQuickSearchInput(this.value)"
+              onfocus="onQuickSearchInput(this.value)"
+              placeholder="พิมพ์ เช่น แกงหมูป่า, แกงเขียวหวาน, ไข่ดาว, กะเพรา, KFC, พิซซ่า..."
+              class="w-full bg-slate-50 border-2 border-emerald-200 focus:border-emerald-500 focus:bg-white rounded-2xl pl-4 pr-20 py-3 text-sm text-slate-800 placeholder-slate-400 focus:outline-none transition"
+            />
+            <button id="btnClearSearch" type="button" onclick="clearQuickSearch()" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-xs bg-slate-200 hover:bg-slate-300 text-slate-600 px-2.5 py-1 rounded-xl font-medium">
+              ล้างคำค้น
+            </button>
+          </div>
+
+          <!-- Quick Popular Single-Tap Suggestion Chips (รวมแกงหมูป่าและแกงไทย) -->
+          <div class="mt-2.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+            <span class="text-[11px] text-slate-400 shrink-0">ฮิต:</span>
+            <button type="button" onclick="triggerInstantSearch('แกงหมูป่า')" class="shrink-0 text-xs bg-red-50 hover:bg-red-100 text-red-800 border border-red-200 px-2.5 py-1 rounded-full font-medium transition">🐗 แกงป่าหมูป่า (380)</button>
+            <button type="button" onclick="triggerInstantSearch('แกง')" class="shrink-0 text-xs bg-orange-50 hover:bg-orange-100 text-orange-800 border border-orange-200 px-2.5 py-1 rounded-full font-medium transition">🍲 รวมเมนูแกงไทย</button>
+            <button type="button" onclick="triggerInstantSearch('ไข่ดาว')" class="shrink-0 text-xs bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 px-2.5 py-1 rounded-full font-medium transition">🍳 ไข่ดาวอมน้ำมัน (60)</button>
+            <button type="button" onclick="triggerInstantSearch('กะเพรา')" class="shrink-0 text-xs bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 px-2.5 py-1 rounded-full font-medium transition">🍛 กะเพราหมูกรอบ (720)</button>
+            <button type="button" onclick="triggerInstantSearch('KFC')" class="shrink-0 text-xs bg-orange-50 hover:bg-orange-100 text-orange-800 border border-orange-200 px-2.5 py-1 rounded-full font-medium transition">🍗 ไก่ KFC (360)</button>
+            <button type="button" onclick="triggerInstantSearch('พิซซ่า')" class="shrink-0 text-xs bg-red-50 hover:bg-red-100 text-red-800 border border-red-200 px-2.5 py-1 rounded-full font-medium transition">🍕 พิซซ่า (380)</button>
+            <button type="button" onclick="triggerInstantSearch('ชานม')" class="shrink-0 text-xs bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 px-2.5 py-1 rounded-full font-medium transition">🧋 ชานมไข่มุก (460)</button>
+            <button type="button" onclick="triggerInstantSearch('ส้มตำ')" class="shrink-0 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-full font-medium transition">🌶️ ส้มตำไทย (220)</button>
+          </div>
+
+          <!-- Autocomplete Results Dropdown / List -->
+          <div id="quickSearchResults" class="mt-3 space-y-2 max-h-80 overflow-y-auto"></div>
+        </div>
+
+        <!-- NEW FEATURE: Smart Meal Recommender based on Remaining Calories + Diet Hacks -->
+        <div class="bg-gradient-to-br from-teal-50 via-emerald-50/70 to-white rounded-3xl p-4 shadow-sm border border-emerald-200/80">
+          <div class="flex items-center justify-between mb-2">
+            <div>
+              <h3 class="text-xs font-extrabold text-emerald-900 flex items-center gap-1.5">
+                <span>💡 แนะนำเมนูมื้อถัดไปตามโควตาแคลที่เหลือ</span>
+              </h3>
+              <p id="smartRecSubtitle" class="text-[11px] text-emerald-700">เลือกเมนูอิ่มอร่อยที่ไม่ทำให้แคลเกินลิมิตวันนี้</p>
+            </div>
+            <button id="btnRefreshRecs" type="button" onclick="shuffleSmartRecommendations()" class="text-[11px] bg-white hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold px-2.5 py-1 rounded-xl transition">
+              🎲 สุ่มเมนูใหม่
+            </button>
+          </div>
+          <div id="smartRecGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2"></div>
+
+          <!-- Quick Thai Diet Hack Buttons (ตัวช่วยหักลบแคลเวลาสั่งลดข้าว/ไม่ซดน้ำแกง) -->
+          <div class="mt-3 pt-2.5 border-t border-emerald-200/60">
+            <div class="text-[11px] font-bold text-emerald-900 mb-1.5">✂️ ทริคลดแคลตอนกินจริง (กดเพื่อหักลบแคลอรี่ที่ประหยัดได้):</div>
+            <div class="flex flex-wrap gap-1.5">
+              <button type="button" onclick="applyDietHack('ไม่ซดน้ำแกงกะทิ/น้ำผัด', 120)" class="text-[11px] bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-300 px-2.5 py-1 rounded-full font-semibold transition">🥄 ไม่ซดน้ำแกงกะทิ (-120 kcal)</button>
+              <button type="button" onclick="applyDietHack('ลดข้าวเหลือครึ่งจาน', 110)" class="text-[11px] bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-300 px-2.5 py-1 rounded-full font-semibold transition">🍚 ลดข้าวครึ่งจาน (-110 kcal)</button>
+              <button type="button" onclick="applyDietHack('ซับน้ำมันของทอด/เขี่ยหนังออก', 80)" class="text-[11px] bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-300 px-2.5 py-1 rounded-full font-semibold transition">🧻 เขี่ยหนัง/ซับน้ำมัน (-80 kcal)</button>
+              <button type="button" onclick="applyDietHack('สั่งเครื่องดื่มหวานน้อย 25%', 100)" class="text-[11px] bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-300 px-2.5 py-1 rounded-full font-semibold transition">🧊 สั่งหวานน้อย (-100 kcal)</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Today's Logged Food Items (รายการอาหารที่บันทึกในวันที่เลือก) -->
+        <div class="bg-white rounded-3xl p-4 shadow-sm border border-slate-100">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h3 class="text-sm font-bold text-slate-800">📋 รายการอาหารที่กิน (<span id="logCountLabel">0</span> เมนู)</h3>
+              <p class="text-[11px] text-slate-400">สามารถกดลบหรือเพิ่มจำนวนหน่วยบริโภคได้ทันที</p>
+            </div>
+            <button id="btnBrowseAllFromLog" type="button" onclick="switchTab('menu')" class="text-xs font-semibold text-emerald-600 hover:underline">
+              ดูแยกหมวดหมู่ทั้งหมด →
+            </button>
+          </div>
+          <div id="dailyLogContainer" class="space-y-2.5"></div>
+        </div>
+
+        <!-- Extra Health Trackers: Water, Exercise Burn & Weight Tracker -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <!-- Water Tracker -->
+          <div class="bg-white rounded-3xl p-4 shadow-sm border border-sky-100">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="text-xl">💧</span>
+                <div>
+                  <h4 class="text-xs font-bold text-slate-800">บันทึกการดื่มน้ำวันนี้</h4>
+                  <p class="text-[11px] text-slate-400">ช่วยลดความอยากอาหารจุกจิก</p>
+                </div>
+              </div>
+              <span id="waterCountBadge" class="text-xs font-bold bg-sky-100 text-sky-700 px-2.5 py-1 rounded-full">0 / 8 แก้ว</span>
+            </div>
+            <div id="waterGlassesRow" class="grid grid-cols-8 gap-1 my-2.5"></div>
+            <div class="flex gap-2">
+              <button id="btnAddWater" type="button" onclick="adjustWater(1)" class="flex-1 bg-sky-500 hover:bg-sky-600 text-white text-xs font-bold py-2 rounded-xl transition">+ ดื่มน้ำ 1 แก้ว (250ml)</button>
+              <button id="btnSubWater" type="button" onclick="adjustWater(-1)" class="px-3 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold py-2 rounded-xl transition">-</button>
+            </div>
+          </div>
+
+          <!-- Quick Exercise Burn -->
+          <div class="bg-white rounded-3xl p-4 shadow-sm border border-amber-100">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="text-xl">🏃‍♂️</span>
+                <div>
+                  <h4 class="text-xs font-bold text-slate-800">ออกกำลังกาย / ลดแคล</h4>
+                  <p class="text-[11px] text-slate-400">หักลบแคลอรี่ที่เกินลิมิต</p>
+                </div>
+              </div>
+              <span id="exerciseBurnBadge" class="text-xs font-bold bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full">-0 kcal</span>
+            </div>
+            <div class="grid grid-cols-2 gap-1.5 my-2">
+              <button type="button" onclick="addExerciseBurn('เดินเร็ว 30 นาที', 150)" class="text-[11px] bg-slate-50 hover:bg-emerald-50 border border-slate-200 rounded-xl py-1.5 px-2 font-medium text-slate-700 transition">🚶 เดินเร็ว (-150)</button>
+              <button type="button" onclick="addExerciseBurn('วิ่งเหยาะ 30 นาที', 280)" class="text-[11px] bg-slate-50 hover:bg-emerald-50 border border-slate-200 rounded-xl py-1.5 px-2 font-medium text-slate-700 transition">🏃 วิ่ง 30 นาที (-280)</button>
+              <button type="button" onclick="addExerciseBurn('ปั่นจักรยาน 30 นาที', 220)" class="text-[11px] bg-slate-50 hover:bg-emerald-50 border border-slate-200 rounded-xl py-1.5 px-2 font-medium text-slate-700 transition">🚴 ปั่นจักรยาน (-220)</button>
+              <button type="button" onclick="addExerciseBurn('เวท/คาร์ดิโอ 45 นาที', 350)" class="text-[11px] bg-slate-50 hover:bg-emerald-50 border border-slate-200 rounded-xl py-1.5 px-2 font-medium text-slate-700 transition">🏋️ คาร์ดิโอ (-350)</button>
+            </div>
+            <div id="exerciseListMini" class="text-[11px] text-slate-500 space-y-1"></div>
+          </div>
+        </div>
+
+        <!-- NEW FEATURE: Daily Weight Check-In Card -->
+        <div class="bg-white rounded-3xl p-4 shadow-sm border border-indigo-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div class="flex items-center gap-2.5">
+            <span class="text-2xl">⚖️</span>
+            <div>
+              <h4 class="text-xs font-bold text-slate-800">บันทึกน้ำหนักตัววันนี้ & ค่าดัชนีมวลกาย (BMI)</h4>
+              <p id="weightStatusSub" class="text-[11px] text-slate-500">น้ำหนักล่าสุด: 68.0 กก. • BMI 23.5 (สมส่วน)</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5 w-full sm:w-auto">
+            <input id="dailyWeightInput" type="number" step="0.1" min="25" max="250" value="68.0" class="w-24 bg-slate-50 border border-indigo-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-indigo-900" />
+            <span class="text-xs text-slate-500">กก.</span>
+            <button id="btnSaveWeight" type="button" onclick="saveDailyWeight()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-1.5 rounded-xl transition">
+              บันทึกน้ำหนัก
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== TAB 2: หมวดหมู่อาหาร & รูปภาพครบ ==================== -->
+      <section id="view-menu" class="tab-view space-y-4">
+        <div class="bg-white rounded-3xl p-4 shadow-sm border border-slate-100">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+            <div>
+              <h2 class="text-base font-bold text-slate-800">🍱 คลังเมนูอาหารในไทย (คิดค่าสูงสุด)</h2>
+              <p class="text-xs text-slate-500">รวมแกงไทย แกงหมูป่า ตามสั่ง สตรีทฟู้ด KFC พิซซ่า คาเฟ่ พร้อมรูปประกอบครบ</p>
+            </div>
+            <button type="button" onclick="openCustomFoodModal()" class="self-start sm:self-auto bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-2 rounded-xl transition">
+              ➕ เพิ่มเมนูใหม่ของฉัน
+            </button>
+          </div>
+
+          <!-- Search inside Catalog -->
+          <div class="relative mb-3">
+            <input
+              id="catalogSearchInput"
+              type="text"
+              oninput="renderCatalogGrid()"
+              placeholder="ค้นหาในหมวดหมู่ เช่น แกงหมูป่า, แกงส้ม, ฮังเล, พะโล้ (พิมพ์ตัวเดียวก็เจอ)..."
+              class="w-full bg-slate-50 border border-slate-200 focus:border-emerald-500 rounded-2xl px-4 py-2.5 text-sm focus:outline-none"
+            />
+          </div>
+
+          <!-- Category Pills with Icons -->
+          <div id="categoryTabsContainer" class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2"></div>
+
+          <!-- Sort & Filter Bar -->
+          <div class="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100 mt-2">
+            <span id="catalogCountText">แสดง 0 เมนู</span>
+            <div class="flex items-center gap-1.5">
+              <span>เรียงตาม:</span>
+              <select id="catalogSortSelect" onchange="renderCatalogGrid()" class="bg-slate-100 text-slate-700 font-semibold rounded-lg px-2 py-1 text-xs focus:outline-none">
+                <option value="popular">ยอดนิยมในไทย</option>
+                <option value="kcal_desc">แคลอรี่: สูง → ต่ำ</option>
+                <option value="kcal_asc">แคลอรี่: ต่ำ → สูง</option>
+                <option value="protein_desc">โปรตีนสูงสุด</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Food Cards Grid with SVG / Uploaded Photo Illustrations -->
+        <div id="catalogGridContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+      </section>
+
+      <!-- ==================== TAB 3: กราฟสถิติ รายวัน / รายเดือน / รายปี ==================== -->
+      <section id="view-stats" class="tab-view space-y-4">
+        <div class="bg-white rounded-3xl p-4 shadow-sm border border-slate-100">
+          <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
+            <div>
+              <h2 class="text-base font-bold text-slate-800">📊 กราฟวิเคราะห์แคลอรี่ย้อนหลัง</h2>
+              <p class="text-xs text-slate-500">เปรียบเทียบปริมาณแคลอรี่ที่กินกับลิมิตต่อวัน (สีแดง = วันเกินลิมิต)</p>
+            </div>
+            <div class="flex bg-slate-100 p-1 rounded-2xl">
+              <button type="button" id="btnPeriodDay" onclick="setStatsPeriod('daily')" class="stats-period-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 text-white shadow-sm transition">รายวัน</button>
+              <button type="button" id="btnPeriodMonth" onclick="setStatsPeriod('monthly')" class="stats-period-btn px-3 py-1.5 rounded-xl text-xs font-bold text-slate-600 transition">รายเดือน</button>
+              <button type="button" id="btnPeriodYear" onclick="setStatsPeriod('yearly')" class="stats-period-btn px-3 py-1.5 rounded-xl text-xs font-bold text-slate-600 transition">รายปี</button>
+            </div>
+          </div>
+
+          <!-- Summary KPI Cards for Selected Period -->
+          <div class="grid grid-cols-3 gap-2.5 mb-4">
+            <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100 text-center">
+              <div class="text-[11px] text-slate-500">เฉลี่ยต่อวัน</div>
+              <div id="statsAvgKcal" class="text-base font-extrabold text-slate-800">0 kcal</div>
+              <div id="statsAvgSub" class="text-[10px] text-emerald-600 font-medium">เทียบลิมิต</div>
+            </div>
+            <div class="bg-emerald-50/70 rounded-2xl p-3 border border-emerald-100 text-center">
+              <div class="text-[11px] text-emerald-700">คุมแคลสำเร็จ</div>
+              <div id="statsSuccessDays" class="text-base font-extrabold text-emerald-700">0 วัน</div>
+              <div class="text-[10px] text-emerald-600">ไม่เกินลิมิต</div>
+            </div>
+            <div class="bg-rose-50/70 rounded-2xl p-3 border border-rose-100 text-center">
+              <div class="text-[11px] text-rose-700">เกินลิมิตต่อวัน</div>
+              <div id="statsOverDays" class="text-base font-extrabold text-rose-600">0 วัน</div>
+              <div class="text-[10px] text-rose-500">มีแจ้งเตือนสีแดง</div>
+            </div>
+          </div>
+
+          <!-- Fixed Height Chart Container per Web App Rules -->
+          <div class="relative h-72 w-full bg-slate-50/60 rounded-2xl p-2 border border-slate-100">
+            <canvas id="historyTrendChart"></canvas>
+          </div>
+
+          <div class="mt-3 flex items-center justify-between text-[11px] text-slate-500">
+            <div class="flex items-center gap-3">
+              <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block"></span> ไม่เกินลิมิต</span>
+              <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-rose-500 inline-block"></span> เกินลิมิตต่อวัน</span>
+              <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-amber-500 inline-block"></span> เส้นลิมิตเป้าหมาย</span>
+            </div>
+            <span id="chartPeriodSubtitle" class="font-semibold text-slate-600">ข้อมูลย้อนหลัง 7 วัน</span>
+          </div>
+        </div>
+
+        <!-- Category Distribution & History Table -->
+        <div class="bg-white rounded-3xl p-4 shadow-sm border border-slate-100">
+          <h3 class="text-sm font-bold text-slate-800 mb-1">🍩 สัดส่วนแคลอรี่แยกตามหมวดหมู่อาหาร</h3>
+          <p class="text-xs text-slate-400 mb-3">ช่วยให้รู้ว่าแคลอรี่ส่วนใหญ่มาจากอาหารหมวดไหนมากที่สุด</p>
+          <div class="relative h-60 w-full">
+            <canvas id="categoryBreakdownChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Clickable Historical Days List -->
+        <div class="bg-white rounded-3xl p-4 shadow-sm border border-slate-100">
+          <div class="flex items-center justify-between mb-2.5">
+            <h3 class="text-sm font-bold text-slate-800">🗓️ ประวัติการกินย้อนหลัง (แตะเพื่อดู/แก้ไขวันนั้น)</h3>
+            <span class="text-[11px] text-slate-400">14 วันล่าสุด</span>
+          </div>
+          <div id="historyDaysList" class="space-y-2 max-h-72 overflow-y-auto"></div>
+        </div>
+      </section>
+
+      <!-- ==================== TAB 4: ตั้งค่าลิมิต & คำนวณ TDEE ==================== -->
+      <section id="view-settings" class="tab-view space-y-4">
+        <div class="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-4">
+          <div>
+            <h2 class="text-base font-bold text-slate-800">⚙️ ตั้งค่าลิมิตแคลอรี่ต่อวัน & คำนวณ TDEE</h2>
+            <p class="text-xs text-slate-500">กำหนดลิมิตแคลอรี่ต่อวันเอง หรือให้ระบบคำนวณจากน้ำหนักและส่วนสูงของคุณ</p>
+          </div>
+
+          <!-- Phone Bottom Bar Clearance Setting -->
+          <div class="bg-sky-50 border border-sky-200 rounded-2xl p-3.5">
+            <div class="text-xs font-bold text-sky-900 mb-1">📱 ปรับระยะห่างแถบเมนูด้านล่าง (กันโดนปุ่มโฮม/ย้อนกลับบัง)</div>
+            <p class="text-[11px] text-sky-700 mb-2">เลือกความสูงของแถบเมนูด้านล่างให้เหมาะกับหน้าจอโทรศัพท์ของคุณ</p>
+            <div class="grid grid-cols-3 gap-2">
+              <button type="button" onclick="setBottomNavOffset(20, 'ปกติ')" class="text-xs bg-white hover:bg-sky-100 text-sky-900 border border-sky-200 py-1.5 rounded-xl font-semibold">ไร้ปุ่ม (จอเต็ม)</button>
+              <button type="button" onclick="setBottomNavOffset(54, 'สูง')" class="text-xs bg-sky-600 text-white py-1.5 rounded-xl font-bold shadow-sm">มีปุ่มโฮม (แนะนำ)</button>
+              <button type="button" onclick="setBottomNavOffset(84, 'สูงพิเศษ')" class="text-xs bg-white hover:bg-sky-100 text-sky-900 border border-sky-200 py-1.5 rounded-xl font-semibold">ยกสูงพิเศษ</button>
+            </div>
+          </div>
+
+          <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-3.5">
+            <label for="manualGoalInput" class="block text-xs font-bold text-emerald-900 mb-1">🎯 ลิมิตแคลอรี่ต่อวันของคุณ (kcal / วัน)</label>
+            <div class="flex gap-2">
+              <input id="manualGoalInput" type="number" min="800" max="5000" step="50" value="2000" class="flex-1 bg-white border border-emerald-300 rounded-xl px-3 py-2 text-base font-extrabold text-emerald-800 focus:outline-none" />
+              <button id="btnSaveManualGoal" type="button" onclick="saveDailyGoalFromInput()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition">
+                บันทึกลิมิต
+              </button>
+            </div>
+            <div class="flex flex-wrap gap-1.5 mt-2">
+              <button type="button" onclick="setQuickGoal(1500)" class="text-[11px] bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-lg font-medium">ลดน้ำหนักหญิง (1,500)</button>
+              <button type="button" onclick="setQuickGoal(1800)" class="text-[11px] bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-lg font-medium">ลดน้ำหนักชาย (1,800)</button>
+              <button type="button" onclick="setQuickGoal(2000)" class="text-[11px] bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-lg font-medium">มาตรฐาน (2,000)</button>
+              <button type="button" onclick="setQuickGoal(2400)" class="text-[11px] bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-lg font-medium">ออกกำลังหนัก (2,400)</button>
+            </div>
+          </div>
+
+          <!-- BMR / TDEE Smart Calculator -->
+          <div class="border-t border-slate-100 pt-3 space-y-3">
+            <h3 class="text-sm font-bold text-slate-800">🧮 คำนวณแคลอรี่ที่เหมาะสมเฉพาะตัว (BMR / TDEE)</h3>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <div>
+                <label class="text-[11px] font-semibold text-slate-600">เพศ</label>
+                <select id="calcGender" class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-semibold">
+                  <option value="male">ชาย</option>
+                  <option value="female">หญิง</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-[11px] font-semibold text-slate-600">อายุ (ปี)</label>
+                <input id="calcAge" type="number" value="28" min="12" max="99" class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-semibold" />
+              </div>
+              <div>
+                <label class="text-[11px] font-semibold text-slate-600">น้ำหนัก (กก.)</label>
+                <input id="calcWeight" type="number" value="68" min="30" max="200" class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-semibold" />
+              </div>
+              <div>
+                <label class="text-[11px] font-semibold text-slate-600">ส่วนสูง (ซม.)</label>
+                <input id="calcHeight" type="number" value="170" min="120" max="220" class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-semibold" />
+              </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div>
+                <label class="text-[11px] font-semibold text-slate-600">ระดับกิจกรรมต่อสัปดาห์</label>
+                <select id="calcActivity" class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-semibold">
+                  <option value="1.2">นั่งทำงานอยู่กับที่ แทบไม่ออกกำลังกาย</option>
+                  <option value="1.375" selected>ออกกำลังกายเบาๆ 1-3 วัน/สัปดาห์</option>
+                  <option value="1.55">ออกกำลังกายปานกลาง 3-5 วัน/สัปดาห์</option>
+                  <option value="1.725">ออกกำลังกายหนัก 6-7 วัน/สัปดาห์</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-[11px] font-semibold text-slate-600">เป้าหมายของคุณ</label>
+                <select id="calcGoalMode" class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-semibold">
+                  <option value="-500">ลดน้ำหนัก (-500 kcal/วัน)</option>
+                  <option value="-300">ลดไขมันแบบสบายๆ (-300 kcal/วัน)</option>
+                  <option value="0">รักษาน้ำหนักคงที่ (TDEE)</option>
+                  <option value="300">เพิ่มกล้ามเนื้อ (+300 kcal/วัน)</option>
+                </select>
+              </div>
+            </div>
+            <button id="btnCalculateTdee" type="button" onclick="calculateAndApplyTdee()" class="w-full bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold py-2.5 rounded-xl transition">
+              ⚡ คำนวณและตั้งเป็นลิมิตแคลอรี่ต่อวันทันที
+            </button>
+            <div id="tdeeResultBox" class="hidden bg-slate-50 rounded-2xl p-3 border border-slate-200 text-xs text-slate-700"></div>
+          </div>
+
+          <!-- Data Backup & Restore -->
+          <div class="border-t border-slate-100 pt-3 space-y-2">
+            <h3 class="text-sm font-bold text-slate-800">💾 สำรองข้อมูล & จัดการประวัติ</h3>
+            <p class="text-xs text-slate-500">ข้อมูลถูกบันทึกอัตโนมัติในเครื่อง (LocalStorage) สามารถส่งออกเก็บเป็นไฟล์สำรองได้</p>
+            <div class="flex flex-wrap gap-2">
+              <button id="btnExportData" type="button" onclick="exportUserData()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold px-3 py-2 rounded-xl transition">
+                📤 ส่งออกข้อมูล (JSON)
+              </button>
+              <button id="btnResetDemoData" type="button" onclick="resetToDemoData()" class="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-bold px-3 py-2 rounded-xl transition">
+                🔄 รีเซ็ตข้อมูลตัวอย่าง 1 ปี
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Floating Bottom Navigation Pill Dock (Lifted above Android Back/Home/Recents buttons!) -->
+    <nav class="floating-bottom-nav fixed left-1/2 -translate-x-1/2 w-[94%] max-w-[456px] bg-white/95 backdrop-blur-md border-2 border-emerald-500/30 rounded-3xl px-2 py-1.5 flex items-center justify-around z-40 shadow-2xl" id="bottomNavBar">
+      <button type="button" id="nav-home" onclick="switchTab('home')" class="nav-btn flex flex-col items-center justify-center py-1 px-3 rounded-2xl text-emerald-600 font-bold transition">
+        <span class="text-lg leading-none">🏠</span>
+        <span class="text-[11px] mt-1">บันทึกวันนี้</span>
+      </button>
+      <button type="button" id="nav-menu" onclick="switchTab('menu')" class="nav-btn flex flex-col items-center justify-center py-1 px-3 rounded-2xl text-slate-500 font-medium transition">
+        <span class="text-lg leading-none">🍛</span>
+        <span class="text-[11px] mt-1">หมวดอาหาร</span>
+      </button>
+      <button type="button" id="nav-stats" onclick="switchTab('stats')" class="nav-btn flex flex-col items-center justify-center py-1 px-3 rounded-2xl text-slate-500 font-medium transition">
+        <span class="text-lg leading-none">📊</span>
+        <span class="text-[11px] mt-1">กราฟ วัน/เดือน/ปี</span>
+      </button>
+      <button type="button" id="nav-settings" onclick="switchTab('settings')" class="nav-btn flex flex-col items-center justify-center py-1 px-3 rounded-2xl text-slate-500 font-medium transition">
+        <span class="text-lg leading-none">⚙️</span>
+        <span class="text-[11px] mt-1">ตั้งค่าลิมิต</span>
+      </button>
+    </nav>
+
+    <!-- ==================== MODAL 1: เพิ่มเมนูอาหารเอง พร้อมอัปโหลดรูปภาพ/ถ่ายรูปได้! ==================== -->
+    <div id="customFoodModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-3xl max-w-md w-full p-5 shadow-2xl space-y-3 border border-slate-100 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between">
+          <h3 class="text-base font-bold text-slate-800">➕ เพิ่มเมนูอาหารใหม่เข้าระบบ</h3>
+          <button type="button" onclick="closeCustomFoodModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold">✕</button>
+        </div>
+        <p class="text-xs text-slate-500">ใส่ค่าแคลอรี่สูงสุดของเมนู พร้อมอัปโหลดรูปถ่ายอาหารจากมือถือหรือเลือกรูปไอคอนได้เลยครับ</p>
+
+        <!-- Image Upload & Icon Picker Section -->
+        <div class="bg-slate-50 rounded-2xl p-3 border border-slate-200 space-y-2.5">
+          <div class="flex items-center gap-3">
+            <div id="customFoodImagePreview" class="w-16 h-16 rounded-2xl overflow-hidden border-2 border-emerald-400 bg-white shrink-0 shadow-sm flex items-center justify-center"></div>
+            <div class="flex-1 space-y-1.5">
+              <div class="text-xs font-bold text-slate-700">📸 รูปภาพประจำเมนูนี้</div>
+              <div class="flex flex-wrap gap-1.5">
+                <label for="customFoodPhotoInput" class="cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-xl inline-flex items-center gap-1 shadow-sm transition">
+                  <span>📷 เลือกรูป / ถ่ายภาพอาหาร</span>
+                </label>
+                <input id="customFoodPhotoInput" type="file" accept="image/*" onchange="handleCustomPhotoUpload(event)" class="hidden" />
+                <button id="btnClearCustomPhoto" type="button" onclick="clearCustomUploadedPhoto()" class="hidden bg-rose-100 hover:bg-rose-200 text-rose-700 text-[11px] font-bold px-2.5 py-1.5 rounded-xl transition">
+                  ลบรูปถ่าย
+                </button>
+              </div>
+              <p class="text-[10px] text-slate-400">รองรับไฟล์ภาพจากแกลเลอรีหรือกล้องมือถือ (ย่อขนาดอัตโนมัติ)</p>
+            </div>
+          </div>
+
+          <!-- Visual SVG Preset Gallery -->
+          <div>
+            <div class="text-[11px] font-semibold text-slate-600 mb-1">หรือแตะเลือกภาพประกอบอาหารสำเร็จรูป:</div>
+            <div id="customFoodSvgPicker" class="grid grid-cols-6 gap-1.5 max-h-28 overflow-y-auto p-1 bg-white rounded-xl border border-slate-200"></div>
+          </div>
+        </div>
+
+        <div class="space-y-2.5">
+          <div>
+            <label class="text-xs font-semibold text-slate-700">ชื่อเมนูอาหาร (ภาษาไทยหรืออังกฤษ)</label>
+            <input id="customFoodName" type="text" placeholder="เช่น แกงหมูป่าใบยี่หร่า / ข้าวหมูทอดพิเศษ" class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+          </div>
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="text-xs font-semibold text-slate-700">แคลอรี่สูงสุด (kcal)</label>
+              <input id="customFoodKcal" type="number" placeholder="450" min="1" max="5000" class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-emerald-700" />
+            </div>
+            <div>
+              <label class="text-xs font-semibold text-slate-700">หมวดหมู่</label>
+              <select id="customFoodCat" onchange="onCustomCatChange(this.value)" class="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm">
+                <option value="curry">แกงไทย/ต้ม/พะโล้</option>
+                <option value="rice">อาหารจานเดียว/ตามสั่ง</option>
+                <option value="noodle">ก๋วยเตี๋ยว/เมนูเส้น</option>
+                <option value="isan">กับข้าว/ส้มตำ/ยำ/ทอด</option>
+                <option value="fastfood">ฟาสต์ฟู้ด/ต่างชาติฮิต</option>
+                <option value="drink">เครื่องดื่ม/คาเฟ่</option>
+                <option value="dessert">ขนมไทย/ของหวาน/ผลไม้</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid grid-cols-3 gap-2">
+            <div>
+              <label class="text-[11px] text-slate-500">โปรตีน (g)</label>
+              <input id="customFoodPro" type="number" value="24" min="0" class="w-full mt-0.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs" />
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-500">คาร์บ (g)</label>
+              <input id="customFoodCarb" type="number" value="35" min="0" class="w-full mt-0.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs" />
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-500">ไขมัน (g)</label>
+              <input id="customFoodFat" type="number" value="25" min="0" class="w-full mt-0.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs" />
+            </div>
+          </div>
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button type="button" onclick="closeCustomFoodModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-2.5 rounded-xl">ยกเลิก</button>
+          <button type="button" onclick="saveCustomFoodItem()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 rounded-xl">บันทึกและเพิ่มเข้ามื้อวันนี้</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== MODAL 2: วิธีติดตั้งลงมือถือ Android / สร้าง APK ==================== -->
+    <div id="apkGuideModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-3xl max-w-md w-full p-5 shadow-2xl space-y-3 border border-slate-100 max-h-[85vh] overflow-y-auto">
+        <div class="flex items-center justify-between">
+          <h3 class="text-base font-bold text-slate-800">📲 วิธีติดตั้งลง Android & แปลงเป็นไฟล์ .APK</h3>
+          <button type="button" onclick="closeApkModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold">✕</button>
+        </div>
+        <div class="space-y-3 text-xs text-slate-600 leading-relaxed">
+          <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-3">
+            <div class="font-bold text-emerald-900 mb-1">วิธีที่ 1: ติดตั้งเป็นแอปบนหน้าจอ Android ทันที (ไม่ต้องง้อไฟล์ APK)</div>
+            <ol class="list-decimal pl-4 space-y-1 text-emerald-800">
+              <li>ดาวน์โหลดไฟล์ <b>cal_thai_tracker.html</b> ลงมือถือ Android แล้วเปิดด้วยแอป <b>Google Chrome</b></li>
+              <li>แตะปุ่มเมนู <b>⋮ (มุมขวาบน)</b> เลือก <b>"เพิ่มลงในหน้าจอหลัก" (Add to Home Screen / Install App)</b></li>
+              <li>ไอคอนแอป <b>CalThai Max</b> จะขึ้นบนหน้าจอมือถือ เปิดใช้งานแบบเต็มจอและเก็บข้อมูลย้อนหลังในเครื่องได้เหมือนแอปจริง 100%</li>
+            </ol>
+          </div>
+          <div class="bg-amber-50 border border-amber-200 rounded-2xl p-3">
+            <div class="font-bold text-amber-900 mb-1">วิธีที่ 2: แปลงไฟล์นี้เป็น .APK ติดตั้งในเครื่องโดยตรง</div>
+            <ol class="list-decimal pl-4 space-y-1 text-amber-900">
+              <li>ใช้แอปฟรีบน Android เช่น <b>Website 2 APK Builder</b> หรือเว็บ <b>AppsGeyser / WebIntoApp</b></li>
+              <li>อัปโหลดไฟล์ <b>cal_thai_tracker.html</b> เดียวนี้เข้าไป (เพราะรวมฐานข้อมูล รูป SVG และระบบออฟไลน์ไว้ในไฟล์เดียวแล้ว)</li>
+              <li>กดสร้างและดาวน์โหลดไฟล์ <b>CalThaiMax.apk</b> มาติดตั้งลงมือถือ Android ได้ทันที!</li>
+            </ol>
+          </div>
+        </div>
+        <button type="button" onclick="closeApkModal()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 rounded-xl">เข้าใจแล้ว เริ่มใช้งานเลย!</button>
+      </div>
+    </div>
+
+    <!-- In-App Toast Notification (Lifted above floating nav bar) -->
+    <div id="toastNotification" class="hidden fixed bottom-36 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 text-white text-xs font-semibold px-4 py-2.5 rounded-2xl shadow-xl border border-slate-700 flex items-center gap-2 transition-all">
+      <span id="toastIcon">✅</span>
+      <span id="toastText">บันทึกเรียบร้อย</span>
+    </div>
+  </div>
+
+  <script>
+    const CATEGORIES = [{"id": "all", "name": "ทั้งหมด", "icon": "🍽️", "color": "#10b981", "desc": "รวมทุกหมวดหมู่อาหาร"}, {"id": "rice", "name": "อาหารจานเดียว/ตามสั่ง", "icon": "🍛", "color": "#f59e0b", "desc": "ข้าวราดแกง ตามสั่ง ยอดฮิต"}, {"id": "noodle", "name": "ก๋วยเตี๋ยว/เมนูเส้น", "icon": "🍜", "color": "#ef4444", "desc": "ก๋วยเตี๋ยวเรือ บะหมี่ ผัดไทย สุกี้"}, {"id": "curry", "name": "แกงไทย/ต้ม/พะโล้", "icon": "🍲", "color": "#dc2626", "desc": "แกงป่าหมูป่า แกงกะทิ แกงส้ม แกงใต้ แกงเหนือ ต้มยำ พะโล้"}, {"id": "isan", "name": "กับข้าว/ส้มตำ/ยำ/ทอด", "icon": "🌶️", "color": "#ec4899", "desc": "อาหารอีสาน แกงไทย เมนูไข่ ของทอด"}, {"id": "fastfood", "name": "ฟาสต์ฟู้ด/ต่างชาติฮิต", "icon": "🍕", "color": "#f97316", "desc": "KFC พิซซ่า เบอร์เกอร์ หมูกระทะ ชาบู"}, {"id": "drink", "name": "เครื่องดื่ม/คาเฟ่", "icon": "🧋", "color": "#8b5cf6", "desc": "ชานมไข่มุก กาแฟเย็น ชาไทย น้ำอัดลม"}, {"id": "dessert", "name": "ขนมไทย/ของหวาน/ผลไม้", "icon": "🥭", "color": "#14b8a6", "desc": "ข้าวเหนียวมะม่วง บิงซู โรตี ทุเรียน"}];
+    const SVG_MAP = {"egg_fried": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><defs><radialGradient id=\"egY\" cx=\"45%\" cy=\"45%\" r=\"50%\"><stop offset=\"0%\" stop-color=\"#fde047\"/><stop offset=\"65%\" stop-color=\"#f59e0b\"/><stop offset=\"100%\" stop-color=\"#d97706\"/></radialGradient></defs><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#fef3c7\"/><path d=\"M16 42c-2-14 10-26 25-25 14 1 25 10 24 24-1 13-13 24-27 23-13-1-20-9-22-22z\" fill=\"#d97706\" opacity=\"0.35\"/><path d=\"M18 41c-2-12 9-23 23-22 13 1 22 9 21 21-1 12-11 21-24 20-12-1-18-8-20-19z\" fill=\"#ffffff\" stroke=\"#b45309\" stroke-width=\"2.5\"/><circle cx=\"41\" cy=\"40\" r=\"11\" fill=\"url(#egY)\"/><circle cx=\"38\" cy=\"36\" r=\"3\" fill=\"#fff\" opacity=\"0.8\"/><circle cx=\"56\" cy=\"28\" r=\"2.5\" fill=\"#f59e0b\" opacity=\"0.7\"/><circle cx=\"24\" cy=\"49\" r=\"2\" fill=\"#f59e0b\" opacity=\"0.7\"/></svg>", "omelet": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#fef9c3\"/><circle cx=\"40\" cy=\"40\" r=\"28\" fill=\"#ffffff\" stroke=\"#e2e8f0\" stroke-width=\"2\"/><ellipse cx=\"40\" cy=\"40\" rx=\"23\" ry=\"19\" fill=\"#facc15\" stroke=\"#ca8a04\" stroke-width=\"2\"/><path d=\"M25 36c6-5 14-5 22 0M28 45c8 4 16 3 22-2\" stroke=\"#a16207\" stroke-width=\"2\" stroke-linecap=\"round\" fill=\"none\"/><circle cx=\"35\" cy=\"34\" r=\"2.2\" fill=\"#16a34a\"/><circle cx=\"46\" cy=\"38\" r=\"2.2\" fill=\"#dc2626\"/><circle cx=\"39\" cy=\"46\" r=\"2.2\" fill=\"#16a34a\"/><circle cx=\"48\" cy=\"31\" r=\"2\" fill=\"#b45309\"/></svg>", "egg_boiled": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#ffedd5\"/><ellipse cx=\"32\" cy=\"42\" rx=\"15\" ry=\"19\" fill=\"#ffffff\" stroke=\"#cbd5e1\" stroke-width=\"2\"/><ellipse cx=\"48\" cy=\"44\" rx=\"15\" ry=\"18\" fill=\"#ffffff\" stroke=\"#cbd5e1\" stroke-width=\"2\"/><circle cx=\"48\" cy=\"46\" r=\"9\" fill=\"#f97316\"/><circle cx=\"46\" cy=\"43\" r=\"2.5\" fill=\"#fde047\" opacity=\"0.8\"/></svg>", "rice_bowl": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#ecfdf5\"/><path d=\"M20 40c0-11 9-18 20-18s20 7 20 18H20z\" fill=\"#ffffff\" stroke=\"#cbd5e1\" stroke-width=\"2\"/><path d=\"M16 40h48l-6 18c-2 5-7 8-14 8H36c-7 0-12-3-14-8l-6-18z\" fill=\"#10b981\"/><path d=\"M22 47h36\" stroke=\"#a7f3d0\" stroke-width=\"2.5\" stroke-linecap=\"round\"/><circle cx=\"35\" cy=\"31\" r=\"1.5\" fill=\"#94a3b8\"/><circle cx=\"44\" cy=\"33\" r=\"1.5\" fill=\"#94a3b8\"/><circle cx=\"39\" cy=\"27\" r=\"1.5\" fill=\"#94a3b8\"/></svg>", "sticky_rice": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#fef3c7\"/><rect x=\"20\" y=\"34\" width=\"40\" height=\"28\" rx=\"8\" fill=\"#d97706\"/><path d=\"M20 42h40M20 50h40M30 34v28M40 34v28M50 34v28\" stroke=\"#92400e\" stroke-width=\"1.5\"/><path d=\"M24 34c2-10 10-16 16-16s14 6 16 16H24z\" fill=\"#ffffff\" stroke=\"#cbd5e1\" stroke-width=\"2\"/></svg>", "kaprao": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#fee2e2\"/><circle cx=\"40\" cy=\"40\" r=\"28\" fill=\"#ffffff\" stroke=\"#fecaca\" stroke-width=\"2\"/><path d=\"M18 40a22 22 0 0 1 22-22v44a22 22 0 0 1-22-22z\" fill=\"#f8fafc\"/><path d=\"M40 18a22 22 0 0 1 0 44V18z\" fill=\"#92400e\"/><circle cx=\"48\" cy=\"32\" r=\"4\" fill=\"#15803d\"/><circle cx=\"53\" cy=\"42\" r=\"4\" fill=\"#16a34a\"/><circle cx=\"46\" cy=\"49\" r=\"3.5\" fill=\"#dc2626\"/><circle cx=\"55\" cy=\"35\" r=\"2.5\" fill=\"#ef4444\"/><circle cx=\"45\" cy=\"39\" r=\"3\" fill=\"#b45309\"/></svg>", "kaprao_egg": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#ffedd5\"/><circle cx=\"40\" cy=\"40\" r=\"28\" fill=\"#ffffff\" stroke=\"#fed7aa\" stroke-width=\"2\"/><circle cx=\"34\" cy=\"42\" r=\"18\" fill=\"#92400e\"/><circle cx=\"30\" cy=\"36\" r=\"4\" fill=\"#16a34a\"/><circle cx=\"38\" cy=\"49\" r=\"3.5\" fill=\"#dc2626\"/><circle cx=\"26\" cy=\"46\" r=\"3.5\" fill=\"#15803d\"/><circle cx=\"49\" cy=\"34\" r=\"12\" fill=\"#ffffff\" stroke=\"#b45309\" stroke-width=\"2\"/><circle cx=\"49\" cy=\"34\" r=\"6\" fill=\"#f59e0b\"/></svg>", "khao_man_kai": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#fef3c7\"/><circle cx=\"40\" cy=\"42\" r=\"27\" fill=\"#ffffff\" stroke=\"#fde68a\" stroke-width=\"2\"/><ellipse cx=\"34\" cy=\"44\" rx=\"16\" ry=\"14\" fill=\"#fef9c3\"/><path d=\"M36 26h20l-4 26H32z\" fill=\"#d97706\" rx=\"4\"/><path d=\"M39 26v26M45 26v26M51 26v26\" stroke=\"#fef3c7\" stroke-width=\"2\"/><circle cx=\"24\" cy=\"32\" r=\"4\" fill=\"#86efac\" stroke=\"#16a34a\" stroke-width=\"1.5\"/><circle cx=\"30\" cy=\"29\" r=\"4\" fill=\"#86efac\" stroke=\"#16a34a\" stroke-width=\"1.5\"/></svg>", "kha_moo": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#f3e8ff\"/><circle cx=\"40\" cy=\"40\" r=\"28\" fill=\"#ffffff\" stroke=\"#e9d5ff\" stroke-width=\"2\"/><circle cx=\"40\" cy=\"40\" r=\"22\" fill=\"#78350f\"/><ellipse cx=\"34\" cy=\"38\" rx=\"11\" ry=\"9\" fill=\"#b45309\"/><circle cx=\"50\" cy=\"45\" r=\"7\" fill=\"#fef3c7\" stroke=\"#92400e\" stroke-width=\"2\"/><circle cx=\"50\" cy=\"45\" r=\"3.5\" fill=\"#ea580c\"/><path d=\"M26 48c4-3 9-3 13 0\" stroke=\"#16a34a\" stroke-width=\"4\" stroke-linecap=\"round\"/></svg>", "moo_daeng": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#ffe4e6\"/><circle cx=\"40\" cy=\"40\" r=\"28\" fill=\"#ffffff\" stroke=\"#fecdd3\" stroke-width=\"2\"/><circle cx=\"40\" cy=\"40\" r=\"21\" fill=\"#dc2626\" opacity=\"0.85\"/><rect x=\"26\" y=\"28\" width=\"28\" height=\"8\" rx=\"4\" fill=\"#991b1b\"/><rect x=\"26\" y=\"39\" width=\"28\" height=\"8\" rx=\"4\" fill=\"#b45309\"/><circle cx=\"48\" cy=\"52\" r=\"6\" fill=\"#fef08a\"/><circle cx=\"48\" cy=\"52\" r=\"3\" fill=\"#f97316\"/></svg>", "fried_rice": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#fef9c3\"/><circle cx=\"40\" cy=\"40\" r=\"28\" fill=\"#ffffff\" stroke=\"#fde047\" stroke-width=\"2\"/><circle cx=\"40\" cy=\"40\" r=\"21\" fill=\"#facc15\"/><circle cx=\"33\" cy=\"35\" r=\"3\" fill=\"#16a34a\"/><circle cx=\"46\" cy=\"34\" r=\"3.5\" fill=\"#fb7185\"/><circle cx=\"42\" cy=\"46\" r=\"3\" fill=\"#ea580c\"/><circle cx=\"32\" cy=\"45\" r=\"2.5\" fill=\"#16a34a\"/><circle cx=\"49\" cy=\"43\" r=\"2.5\" fill=\"#b45309\"/></svg>", "moo_kratiam": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#ffedd5\"/><circle cx=\"40\" cy=\"40\" r=\"28\" fill=\"#ffffff\" stroke=\"#fed7aa\" stroke-width=\"2\"/><circle cx=\"35\" cy=\"42\" r=\"16\" fill=\"#f8fafc\"/><circle cx=\"45\" cy=\"38\" r=\"15\" fill=\"#a16207\"/><circle cx=\"42\" cy=\"34\" r=\"3\" fill=\"#fef08a\"/><circle cx=\"49\" cy=\"41\" r=\"3\" fill=\"#fde047\"/><circle cx=\"43\" cy=\"44\" r=\"2.5\" fill=\"#fef08a\"/></svg>", "soup_bowl": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#ffedd5\"/><ellipse cx=\"40\" cy=\"38\" rx=\"24\" ry=\"12\" fill=\"#f97316\"/><path d=\"M16 38c0 16 10 24 24 24s24-8 24-24H16z\" fill=\"#ea580c\"/><ellipse cx=\"40\" cy=\"38\" rx=\"21\" ry=\"9\" fill=\"#fdba74\"/><circle cx=\"34\" cy=\"37\" r=\"4\" fill=\"#dc2626\"/><circle cx=\"46\" cy=\"39\" r=\"3.5\" fill=\"#16a34a\"/><path d=\"M32 24c0-4 3-6 3-10M42 24c0-4 3-6 3-10\" stroke=\"#fb923c\" stroke-width=\"2.5\" stroke-linecap=\"round\" fill=\"none\"/></svg>", "pad_thai": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#ffedd5\"/><circle cx=\"40\" cy=\"40\" r=\"28\" fill=\"#ffffff\" stroke=\"#fed7aa\" stroke-width=\"2\"/><path d=\"M24 38c8-8 24-8 32 0M22 44c10-6 26-6 36 0M26 50c8-5 20-5 28 0\" stroke=\"#ea580c\" stroke-width=\"4\" stroke-linecap=\"round\" fill=\"none\"/><circle cx=\"36\" cy=\"32\" r=\"5\" fill=\"#fb7185\"/><circle cx=\"46\" cy=\"34\" r=\"5\" fill=\"#fb7185\"/><path d=\"M52 48l8 4-4 6z\" fill=\"#84cc16\"/></svg>", "noodle_soup": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#fef2f2\"/><path d=\"M16 38h48c0 16-10 24-24 24S16 54 16 38z\" fill=\"#ef4444\"/><ellipse cx=\"40\" cy=\"38\" rx=\"24\" ry=\"10\" fill=\"#fca5a5\"/><path d=\"M26 38c6-4 22-4 28 0\" stroke=\"#fef08a\" stroke-width=\"3.5\" stroke-linecap=\"round\" fill=\"none\"/><circle cx=\"33\" cy=\"36\" r=\"4\" fill=\"#f8fafc\"/><circle cx=\"46\" cy=\"37\" r=\"4\" fill=\"#16a34a\"/><path d=\"M46 18L60 32M50 14L64 28\" stroke=\"#78350f\" stroke-width=\"2.5\" stroke-linecap=\"round\"/></svg>", "boat_noodle": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#fef3c7\"/><path d=\"M16 38h48c0 15-10 24-24 24S16 53 16 38z\" fill=\"#78350f\"/><ellipse cx=\"40\" cy=\"38\" rx=\"24\" ry=\"10\" fill=\"#92400e\"/><circle cx=\"32\" cy=\"37\" r=\"4\" fill=\"#d6d3d1\"/><circle cx=\"42\" cy=\"36\" r=\"4\" fill=\"#f59e0b\"/><circle cx=\"50\" cy=\"39\" r=\"3\" fill=\"#16a34a\"/></svg>", "bamee": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#fef9c3\"/><circle cx=\"40\" cy=\"40\" r=\"27\" fill=\"#ffffff\" stroke=\"#fde047\" stroke-width=\"2\"/><circle cx=\"40\" cy=\"40\" r=\"20\" fill=\"#facc15\"/><path d=\"M26 38c8-5 20-5 28 0M26 44c8-5 20-5 28 0\" stroke=\"#ca8a04\" stroke-width=\"3\" stroke-linecap=\"round\" fill=\"none\"/><circle cx=\"34\" cy=\"32\" r=\"5\" fill=\"#dc2626\"/><circle cx=\"46\" cy=\"32\" r=\"5\" fill=\"#dc2626\"/><path d=\"M28 48h24\" stroke=\"#16a34a\" stroke-width=\"4\" stroke-linecap=\"round\"/></svg>", "somtum": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#dcfce7\"/><circle cx=\"40\" cy=\"42\" r=\"26\" fill=\"#ffffff\" stroke=\"#86efac\" stroke-width=\"2\"/><path d=\"M25 38l30 8M26 46l28-8M30 32l20 18\" stroke=\"#facc15\" stroke-width=\"3\" stroke-linecap=\"round\"/><circle cx=\"33\" cy=\"36\" r=\"4\" fill=\"#ef4444\"/><circle cx=\"47\" cy=\"45\" r=\"4\" fill=\"#ef4444\"/><circle cx=\"44\" cy=\"34\" r=\"3\" fill=\"#16a34a\"/><circle cx=\"34\" cy=\"47\" r=\"3\" fill=\"#b45309\"/></svg>", "grilled_meat": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#ffedd5\"/><rect x=\"18\" y=\"24\" width=\"44\" height=\"32\" rx=\"12\" fill=\"#b45309\"/><path d=\"M26 24l-4 32M36 24l-4 32M46 24l-4 32M56 24l-4 32\" stroke=\"#78350f\" stroke-width=\"3\"/><circle cx=\"58\" cy=\"54\" r=\"9\" fill=\"#dc2626\" stroke=\"#ffffff\" stroke-width=\"2\"/></svg>", "skewer": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#fef3c7\"/><line x1=\"20\" y1=\"60\" x2=\"58\" y2=\"22\" stroke=\"#a16207\" stroke-width=\"3\" stroke-linecap=\"round\"/><circle cx=\"32\" cy=\"48\" r=\"8\" fill=\"#d97706\"/><circle cx=\"42\" cy=\"38\" r=\"8\" fill=\"#b45309\"/><circle cx=\"52\" cy=\"28\" r=\"8\" fill=\"#d97706\"/></svg>", "fried_chicken": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#fee2e2\"/><path d=\"M24 52l-6 6a5 5 0 0 0 7 7l6-6\" stroke=\"#f8fafc\" stroke-width=\"6\" stroke-linecap=\"round\"/><ellipse cx=\"45\" cy=\"36\" rx=\"19\" ry=\"15\" transform=\"rotate(-35 45 36)\" fill=\"#ea580c\" stroke=\"#9a3412\" stroke-width=\"2\"/><circle cx=\"42\" cy=\"32\" r=\"3\" fill=\"#fdba74\"/><circle cx=\"50\" cy=\"36\" r=\"2.5\" fill=\"#fdba74\"/></svg>", "pizza": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#ffedd5\"/><path d=\"M40 16L64 60A28 28 0 0 1 16 60Z\" fill=\"#facc15\" stroke=\"#d97706\" stroke-width=\"3\"/><path d=\"M16 58a28 28 0 0 0 48 0\" stroke=\"#b45309\" stroke-width=\"6\" stroke-linecap=\"round\" fill=\"none\"/><circle cx=\"40\" cy=\"36\" r=\"4.5\" fill=\"#dc2626\"/><circle cx=\"33\" cy=\"48\" r=\"4.5\" fill=\"#dc2626\"/><circle cx=\"47\" cy=\"49\" r=\"4.5\" fill=\"#dc2626\"/><circle cx=\"41\" cy=\"44\" r=\"2.5\" fill=\"#16a34a\"/></svg>", "burger": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#fef3c7\"/><path d=\"M18 36c0-12 10-18 22-18s22 6 22 18H18z\" fill=\"#d97706\"/><path d=\"M16 40h48\" stroke=\"#16a34a\" stroke-width=\"4\" stroke-linecap=\"round\"/><path d=\"M18 45h44\" stroke=\"#facc15\" stroke-width=\"4\" stroke-linecap=\"round\"/><rect x=\"18\" y=\"47\" width=\"44\" height=\"7\" rx=\"3.5\" fill=\"#78350f\"/><rect x=\"20\" y=\"55\" width=\"40\" height=\"8\" rx=\"4\" fill=\"#d97706\"/></svg>", "fries": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#fee2e2\"/><rect x=\"26\" y=\"16\" width=\"6\" height=\"28\" rx=\"2\" fill=\"#facc15\"/><rect x=\"34\" y=\"14\" width=\"6\" height=\"30\" rx=\"2\" fill=\"#eab308\"/><rect x=\"42\" y=\"17\" width=\"6\" height=\"27\" rx=\"2\" fill=\"#facc15\"/><rect x=\"50\" y=\"20\" width=\"6\" height=\"24\" rx=\"2\" fill=\"#eab308\"/><path d=\"M22 36h36l-4 28H26z\" fill=\"#dc2626\"/><circle cx=\"40\" cy=\"50\" r=\"5\" fill=\"#fef08a\"/></svg>", "hotpot": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#ffe4e6\"/><path d=\"M14 40h52l-6 20H20z\" fill=\"#334155\"/><ellipse cx=\"40\" cy=\"40\" rx=\"26\" ry=\"10\" fill=\"#ef4444\"/><circle cx=\"32\" cy=\"39\" r=\"5\" fill=\"#fca5a5\"/><circle cx=\"46\" cy=\"41\" r=\"5\" fill=\"#fef08a\"/><circle cx=\"40\" cy=\"36\" r=\"4\" fill=\"#22c55e\"/></svg>", "sushi": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#ffedd5\"/><rect x=\"20\" y=\"36\" width=\"40\" height=\"20\" rx=\"8\" fill=\"#ffffff\" stroke=\"#e2e8f0\" stroke-width=\"2\"/><rect x=\"18\" y=\"28\" width=\"44\" height=\"12\" rx=\"6\" fill=\"#fb7185\"/><rect x=\"35\" y=\"28\" width=\"10\" height=\"28\" fill=\"#1e293b\"/></svg>", "boba": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#f3e8ff\"/><line x1=\"46\" y1=\"12\" x2=\"38\" y2=\"58\" stroke=\"#ec4899\" stroke-width=\"5\" stroke-linecap=\"round\"/><path d=\"M24 26h32l-4 38H28z\" fill=\"#fde68a\" stroke=\"#d97706\" stroke-width=\"2\"/><path d=\"M22 26h36\" stroke=\"#ffffff\" stroke-width=\"4\" stroke-linecap=\"round\"/><circle cx=\"33\" cy=\"56\" r=\"3\" fill=\"#451a03\"/><circle cx=\"40\" cy=\"58\" r=\"3\" fill=\"#451a03\"/><circle cx=\"47\" cy=\"55\" r=\"3\" fill=\"#451a03\"/><circle cx=\"36\" cy=\"50\" r=\"3\" fill=\"#451a03\"/><circle cx=\"44\" cy=\"49\" r=\"3\" fill=\"#451a03\"/></svg>", "iced_drink": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#ffedd5\"/><line x1=\"45\" y1=\"12\" x2=\"38\" y2=\"54\" stroke=\"#10b981\" stroke-width=\"4\" stroke-linecap=\"round\"/><path d=\"M24 28h32l-4 36H28z\" fill=\"#ea580c\"/><path d=\"M24 28c0-8 7-12 16-12s16 4 16 12H24z\" fill=\"#ffffff\"/><rect x=\"31\" y=\"34\" width=\"7\" height=\"7\" rx=\"1.5\" fill=\"#fed7aa\"/><rect x=\"41\" y=\"36\" width=\"7\" height=\"7\" rx=\"1.5\" fill=\"#fed7aa\"/></svg>", "soda": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#fee2e2\"/><rect x=\"26\" y=\"20\" width=\"28\" height=\"44\" rx=\"6\" fill=\"#dc2626\"/><rect x=\"28\" y=\"16\" width=\"24\" height=\"4\" rx=\"2\" fill=\"#94a3b8\"/><path d=\"M26 38c8-4 20 4 28 0\" stroke=\"#ffffff\" stroke-width=\"3\" fill=\"none\"/></svg>", "mango_rice": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#fef9c3\"/><circle cx=\"40\" cy=\"42\" r=\"26\" fill=\"#ffffff\" stroke=\"#fde047\" stroke-width=\"2\"/><ellipse cx=\"31\" cy=\"44\" rx=\"11\" ry=\"9\" fill=\"#f8fafc\" stroke=\"#cbd5e1\" stroke-width=\"1.5\"/><ellipse cx=\"48\" cy=\"42\" rx=\"12\" ry=\"9\" transform=\"rotate(-20 48 42)\" fill=\"#facc15\"/><path d=\"M26 42c4-2 8 2 12 0\" stroke=\"#ffffff\" stroke-width=\"3\" stroke-linecap=\"round\"/></svg>", "durian": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#ecfccb\"/><path d=\"M22 46c0-14 10-24 20-24s18 10 18 24c0 8-8 14-18 14S22 54 22 46z\" fill=\"#facc15\" stroke=\"#ca8a04\" stroke-width=\"2.5\"/><ellipse cx=\"35\" cy=\"45\" rx=\"7\" ry=\"10\" fill=\"#fde047\"/><ellipse cx=\"47\" cy=\"45\" rx=\"7\" ry=\"10\" fill=\"#fde047\"/></svg>", "roti": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#fef3c7\"/><rect x=\"18\" y=\"24\" width=\"44\" height=\"32\" rx=\"6\" fill=\"#f59e0b\" stroke=\"#b45309\" stroke-width=\"2\"/><path d=\"M22 30c10 6 24-6 36 0M22 40c10 6 24-6 36 0M22 50c10 6 24-6 36 0\" stroke=\"#ffffff\" stroke-width=\"3\" stroke-linecap=\"round\" fill=\"none\"/></svg>", "bingsu": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#fce7f3\"/><path d=\"M22 42c0-12 8-22 18-22s18 10 18 22H22z\" fill=\"#fbcfe8\"/><path d=\"M18 42h44l-8 20H26z\" fill=\"#ec4899\"/><circle cx=\"40\" cy=\"18\" r=\"5\" fill=\"#ef4444\"/></svg>", "croissant": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#ffedd5\"/><path d=\"M18 48c-2-14 10-24 22-24s24 10 22 24c-4 4-10 0-12-6-3-3-7-3-10 0-2 6-8 10-12 6z\" fill=\"#d97706\" stroke=\"#92400e\" stroke-width=\"2\"/></svg>", "donut": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#fce7f3\"/><circle cx=\"40\" cy=\"40\" r=\"22\" fill=\"#f59e0b\"/><circle cx=\"40\" cy=\"40\" r=\"19\" fill=\"#ec4899\"/><circle cx=\"40\" cy=\"40\" r=\"8\" fill=\"#fce7f3\"/><circle cx=\"32\" cy=\"28\" r=\"2\" fill=\"#fef08a\"/><circle cx=\"48\" cy=\"30\" r=\"2\" fill=\"#67e8f9\"/><circle cx=\"30\" cy=\"46\" r=\"2\" fill=\"#ffffff\"/><circle cx=\"49\" cy=\"47\" r=\"2\" fill=\"#fde047\"/></svg>", "curry_boar": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#fef2f2\"/><circle cx=\"40\" cy=\"40\" r=\"28\" fill=\"#7f1d1d\" stroke=\"#fecaca\" stroke-width=\"2\"/><circle cx=\"40\" cy=\"40\" r=\"23\" fill=\"#b91c1c\"/><ellipse cx=\"32\" cy=\"36\" rx=\"7\" ry=\"5\" fill=\"#78350f\" stroke=\"#fde68a\" stroke-width=\"1.5\"/><ellipse cx=\"47\" cy=\"44\" rx=\"7\" ry=\"5\" fill=\"#78350f\" stroke=\"#fde68a\" stroke-width=\"1.5\"/><circle cx=\"46\" cy=\"31\" r=\"4.5\" fill=\"#22c55e\"/><circle cx=\"46\" cy=\"31\" r=\"2\" fill=\"#bbf7d0\"/><circle cx=\"31\" cy=\"47\" r=\"4.5\" fill=\"#22c55e\"/><path d=\"M36 28l4 10M34 31h6M35 35h6\" stroke=\"#15803d\" stroke-width=\"2\" stroke-linecap=\"round\"/><path d=\"M24 38c3-4 8-4 11 0\" stroke=\"#ef4444\" stroke-width=\"2.5\" stroke-linecap=\"round\" fill=\"none\"/><path d=\"M48 36l8-6\" stroke=\"#dc2626\" stroke-width=\"3\" stroke-linecap=\"round\"/></svg>", "curry_green": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#ecfdf5\"/><circle cx=\"40\" cy=\"40\" r=\"28\" fill=\"#ffffff\" stroke=\"#a7f3d0\" stroke-width=\"2\"/><circle cx=\"40\" cy=\"40\" r=\"23\" fill=\"#84cc16\"/><circle cx=\"40\" cy=\"40\" r=\"19\" fill=\"#a3e635\" opacity=\"0.7\"/><circle cx=\"33\" cy=\"35\" r=\"5\" fill=\"#fef9c3\"/><circle cx=\"46\" cy=\"43\" r=\"5\" fill=\"#fef9c3\"/><circle cx=\"46\" cy=\"32\" r=\"4\" fill=\"#15803d\"/><circle cx=\"32\" cy=\"46\" r=\"4\" fill=\"#15803d\"/><path d=\"M38 38l8-4\" stroke=\"#dc2626\" stroke-width=\"3\" stroke-linecap=\"round\"/><circle cx=\"41\" cy=\"47\" r=\"2.5\" fill=\"#ef4444\"/></svg>", "curry_yellow": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#fefce8\"/><circle cx=\"40\" cy=\"40\" r=\"28\" fill=\"#ffffff\" stroke=\"#fde047\" stroke-width=\"2\"/><circle cx=\"40\" cy=\"40\" r=\"23\" fill=\"#eab308\"/><circle cx=\"34\" cy=\"36\" r=\"6\" fill=\"#fef08a\"/><rect x=\"42\" y=\"32\" width=\"10\" height=\"8\" rx=\"2\" fill=\"#fde047\"/><rect x=\"28\" y=\"44\" width=\"12\" height=\"7\" rx=\"2\" fill=\"#fb923c\"/><circle cx=\"46\" cy=\"46\" r=\"4\" fill=\"#16a34a\"/><path d=\"M36 28l10 6\" stroke=\"#dc2626\" stroke-width=\"2.5\" stroke-linecap=\"round\"/></svg>", "curry_red": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#fff1f2\"/><circle cx=\"40\" cy=\"40\" r=\"28\" fill=\"#ffffff\" stroke=\"#fecdd3\" stroke-width=\"2\"/><circle cx=\"40\" cy=\"40\" r=\"23\" fill=\"#dc2626\"/><path d=\"M26 38c6-5 20 5 28 0\" stroke=\"#fef2f2\" stroke-width=\"3\" stroke-linecap=\"round\" fill=\"none\"/><ellipse cx=\"34\" cy=\"34\" rx=\"6\" ry=\"4\" fill=\"#fdba74\"/><ellipse cx=\"46\" cy=\"45\" rx=\"6\" ry=\"4\" fill=\"#fdba74\"/><circle cx=\"46\" cy=\"33\" r=\"3.5\" fill=\"#15803d\"/><circle cx=\"33\" cy=\"46\" r=\"3.5\" fill=\"#15803d\"/></svg>", "curry_hanglay": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#fffbeb\"/><circle cx=\"40\" cy=\"40\" r=\"28\" fill=\"#ffffff\" stroke=\"#fde68a\" stroke-width=\"2\"/><circle cx=\"40\" cy=\"40\" r=\"23\" fill=\"#92400e\"/><rect x=\"27\" y=\"30\" width=\"12\" height=\"10\" rx=\"3\" fill=\"#d97706\" stroke=\"#fef3c7\" stroke-width=\"1.5\"/><rect x=\"42\" y=\"38\" width=\"12\" height=\"10\" rx=\"3\" fill=\"#b45309\" stroke=\"#fef3c7\" stroke-width=\"1.5\"/><path d=\"M30 46l8-4M32 50l8-4\" stroke=\"#fde047\" stroke-width=\"2\" stroke-linecap=\"round\"/><circle cx=\"46\" cy=\"31\" r=\"3.5\" fill=\"#fef08a\"/></svg>", "clear_soup": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#f0fdf4\"/><circle cx=\"40\" cy=\"40\" r=\"28\" fill=\"#ffffff\" stroke=\"#bbf7d0\" stroke-width=\"2\"/><circle cx=\"40\" cy=\"40\" r=\"23\" fill=\"#fef9c3\" opacity=\"0.65\"/><circle cx=\"32\" cy=\"35\" r=\"5\" fill=\"#fde047\"/><circle cx=\"47\" cy=\"36\" r=\"5\" fill=\"#fca5a5\"/><rect x=\"30\" y=\"44\" width=\"8\" height=\"8\" rx=\"2\" fill=\"#ffffff\" stroke=\"#e2e8f0\"/><path d=\"M43 44c4 2 8 6 6 10-3 2-8-2-6-10z\" fill=\"#14532d\"/><circle cx=\"40\" cy=\"39\" r=\"2.5\" fill=\"#22c55e\"/></svg>", "crab_curry": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#fff7ed\"/><circle cx=\"40\" cy=\"40\" r=\"28\" fill=\"#ffffff\" stroke=\"#fed7aa\" stroke-width=\"2\"/><circle cx=\"40\" cy=\"40\" r=\"23\" fill=\"#f59e0b\"/><path d=\"M28 44c4-6 20-6 24 0\" stroke=\"#15803d\" stroke-width=\"5\" stroke-linecap=\"round\"/><circle cx=\"40\" cy=\"36\" r=\"7\" fill=\"#ef4444\"/><path d=\"M31 33l-5-4M49 33l5-4\" stroke=\"#dc2626\" stroke-width=\"2.5\" stroke-linecap=\"round\"/><circle cx=\"36\" cy=\"47\" r=\"4\" fill=\"#fef9c3\"/><circle cx=\"45\" cy=\"47\" r=\"4\" fill=\"#fef9c3\"/></svg>", "palo_soup": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#fef3c7\"/><circle cx=\"40\" cy=\"40\" r=\"28\" fill=\"#ffffff\" stroke=\"#fde68a\" stroke-width=\"2\"/><circle cx=\"40\" cy=\"40\" r=\"23\" fill=\"#451a03\"/><circle cx=\"33\" cy=\"37\" r=\"7\" fill=\"#d97706\"/><circle cx=\"33\" cy=\"37\" r=\"3.5\" fill=\"#facc15\"/><circle cx=\"47\" cy=\"43\" r=\"7\" fill=\"#d97706\"/><circle cx=\"47\" cy=\"43\" r=\"3.5\" fill=\"#facc15\"/><rect x=\"42\" y=\"27\" width=\"10\" height=\"8\" rx=\"2\" fill=\"#b45309\"/><circle cx=\"31\" cy=\"49\" r=\"3\" fill=\"#22c55e\"/></svg>", "seafood_plate": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#ecfeff\"/><circle cx=\"40\" cy=\"40\" r=\"28\" fill=\"#ffffff\" stroke=\"#a5f3fc\" stroke-width=\"2\"/><ellipse cx=\"40\" cy=\"40\" rx=\"20\" ry=\"11\" fill=\"#d97706\" stroke=\"#92400e\" stroke-width=\"2\"/><path d=\"M56 40l8-7v14z\" fill=\"#b45309\"/><circle cx=\"30\" cy=\"38\" r=\"2\" fill=\"#ffffff\"/><path d=\"M26 50c8 3 18 3 26 0\" stroke=\"#84cc16\" stroke-width=\"3\" stroke-linecap=\"round\" fill=\"none\"/></svg>", "matcha_drink": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#dcfce7\"/><line x1=\"45\" y1=\"12\" x2=\"38\" y2=\"54\" stroke=\"#15803d\" stroke-width=\"4\" stroke-linecap=\"round\"/><path d=\"M24 28h32l-4 36H28z\" fill=\"#22c55e\"/><path d=\"M24 28c0-8 7-12 16-12s16 4 16 12H24z\" fill=\"#ffffff\"/><circle cx=\"34\" cy=\"42\" r=\"3\" fill=\"#bbf7d0\"/><circle cx=\"44\" cy=\"46\" r=\"3\" fill=\"#bbf7d0\"/></svg>", "coffee_cup": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#fef3c7\"/><line x1=\"44\" y1=\"12\" x2=\"38\" y2=\"54\" stroke=\"#78350f\" stroke-width=\"4\" stroke-linecap=\"round\"/><path d=\"M24 26h32l-4 38H28z\" fill=\"#92400e\"/><path d=\"M25 26h30l-1 10H26z\" fill=\"#fde68a\"/><rect x=\"31\" y=\"40\" width=\"7\" height=\"7\" rx=\"1.5\" fill=\"#d97706\"/><rect x=\"42\" y=\"42\" width=\"7\" height=\"7\" rx=\"1.5\" fill=\"#d97706\"/></svg>", "thai_sweet": "<svg viewBox=\"0 0 80 80\" class=\"w-full h-full\"><rect width=\"80\" height=\"80\" rx=\"18\" fill=\"#fdf4ff\"/><circle cx=\"40\" cy=\"42\" r=\"26\" fill=\"#ffffff\" stroke=\"#f5d0fe\" stroke-width=\"2\"/><circle cx=\"32\" cy=\"38\" r=\"6\" fill=\"#facc15\"/><circle cx=\"44\" cy=\"36\" r=\"6\" fill=\"#eab308\"/><circle cx=\"38\" cy=\"48\" r=\"6\" fill=\"#ca8a04\"/><path d=\"M24 44c4 6 12 10 20 8\" stroke=\"#16a34a\" stroke-width=\"4\" stroke-linecap=\"round\" fill=\"none\"/></svg>"};
+    const DEFAULT_FOODS = [{"id": "egg_fried_oily", "name": "ไข่ดาว (อมน้ำมัน/ทอดกรอบ)", "category": "isan", "kcal": 60, "maxNote": "แบบแห้ง ~50 kcal (คิดค่าสูงสุดอมน้ำมัน 60 kcal)", "unit": "1 ฟอง", "protein": 6, "carbs": 1, "fat": 4, "sodium": 95, "svgType": "egg_fried", "aliases": "ไข่ดาว ดาว ไข่ทอด"}, {"id": "egg_omelet_oily", "name": "ไข่เจียวหมูสับ (ฟูอมน้ำมัน)", "category": "isan", "kcal": 280, "maxNote": "เจียวธรรมดา ~200 kcal (คิดค่าสูงสุดอมน้ำมัน)", "unit": "1 จาน", "protein": 14, "carbs": 3, "fat": 24, "sodium": 420, "svgType": "omelet", "aliases": "ไข่เจียว เจียว"}, {"id": "egg_boiled", "name": "ไข่ต้ม / ไข่ลวก / ไข่ออนเซ็น", "category": "isan", "kcal": 75, "maxNote": "ต้มสุกมาตรฐาน", "unit": "1 ฟอง", "protein": 7, "carbs": 1, "fat": 5, "sodium": 70, "svgType": "egg_boiled", "aliases": "ไข่ต้ม ไข่ลวก ไข่ออนเซ็น"}, {"id": "egg_salted", "name": "ไข่เค็ม / ไข่เยี่ยวม้า", "category": "isan", "kcal": 90, "maxNote": "ค่าสูงสุดต่อฟอง", "unit": "1 ฟอง", "protein": 7, "carbs": 1, "fat": 6, "sodium": 480, "svgType": "egg_boiled", "aliases": "ไข่เค็ม ไข่เยี่ยวม้า"}, {"id": "rice_white", "name": "ข้าวสวย (จานพูน)", "category": "rice", "kcal": 240, "maxNote": "ทัพพีปกติ ~160 kcal (คิดจานพูนสูงสุด)", "unit": "1 จาน (180g)", "protein": 4, "carbs": 52, "fat": 1, "sodium": 10, "svgType": "rice_bowl", "aliases": "ข้าวเปล่า ข้าวสวย"}, {"id": "rice_sticky", "name": "ข้าวเหนียวนึ่ง (ห่อใหญ่)", "category": "isan", "kcal": 280, "maxNote": "ห่อเล็ก ~180 kcal (คิดห่อใหญ่สูงสุด)", "unit": "1 ห่อ (120g)", "protein": 5, "carbs": 62, "fat": 1, "sodium": 15, "svgType": "sticky_rice", "aliases": "ข้าวเหนียว"}, {"id": "kaprao_moo_krob", "name": "ข้าวผัดกะเพราหมูกรอบ", "category": "rice", "kcal": 720, "maxNote": "กะเพราหมูสับ ~580 kcal (คิดหมูกรอบผัดน้ำมันฉ่ำ)", "unit": "1 จาน", "protein": 24, "carbs": 68, "fat": 38, "sodium": 1250, "svgType": "kaprao", "aliases": "กะเพรา กระเพรา หมูกรอบ ข้าวกะเพรา"}, {"id": "kaprao_moo_sab", "name": "ข้าวผัดกะเพราหมูสับ/ไก่", "category": "rice", "kcal": 620, "maxNote": "ผัดแห้ง ~480 kcal (คิดผัดน้ำมันร้านตามสั่ง)", "unit": "1 จาน", "protein": 26, "carbs": 65, "fat": 28, "sodium": 1180, "svgType": "kaprao", "aliases": "กะเพราหมูสับ กะเพราไก่ กระเพรา"}, {"id": "kaprao_moo_krob_egg", "name": "ข้าวกะเพราหมูกรอบ + ไข่ดาวอมน้ำมัน", "category": "rice", "kcal": 780, "maxNote": "รวมกะเพราหมูกรอบ 720 + ไข่ดาวอมน้ำมัน 60 kcal", "unit": "1 จานครบเซ็ต", "protein": 30, "carbs": 69, "fat": 42, "sodium": 1345, "svgType": "kaprao_egg", "aliases": "กะเพราหมูกรอบไข่ดาว"}, {"id": "khao_man_kai_tod", "name": "ข้าวมันไก่ทอด (หนังกรอบ+น้ำจิ้ม)", "category": "rice", "kcal": 740, "maxNote": "ไก่ต้ม ~590 kcal (คิดไก่ทอดชุบแป้ง+ข้าวมันฉ่ำ)", "unit": "1 จาน", "protein": 28, "carbs": 76, "fat": 36, "sodium": 1150, "svgType": "khao_man_kai", "aliases": "ข้าวมันไก่ทอด มันไก่ทอด"}, {"id": "khao_man_kai_tom", "name": "ข้าวมันไก่ต้ม (ติดหนัง)", "category": "rice", "kcal": 640, "maxNote": "ไม่เอาหนัง ~520 kcal (คิดแบบติดหนัง+น้ำซุป)", "unit": "1 จาน", "protein": 31, "carbs": 70, "fat": 26, "sodium": 1080, "svgType": "khao_man_kai", "aliases": "ข้าวมันไก่ ข้าวมันไก่ต้ม"}, {"id": "khao_man_kai_mix", "name": "ข้าวมันไก่ผสม (ต้ม+ทอด พิเศษ)", "category": "rice", "kcal": 820, "maxNote": "จานพิเศษสองอย่างพร้อมข้าวมันพูน", "unit": "1 จานพิเศษ", "protein": 36, "carbs": 82, "fat": 39, "sodium": 1320, "svgType": "khao_man_kai", "aliases": "ข้าวมันไก่ผสม"}, {"id": "khao_kha_moo", "name": "ข้าวขาหมู (เนื้อหนัง+ไข่พะโล้)", "category": "rice", "kcal": 760, "maxNote": "เนื้อล้วน ~580 kcal (คิดเนื้อหนัง+น้ำราดฉ่ำ)", "unit": "1 จาน", "protein": 32, "carbs": 68, "fat": 40, "sodium": 1420, "svgType": "kha_moo", "aliases": "ข้าวขาหมู ขาหมู คากิ"}, {"id": "khao_moo_daeng_krob", "name": "ข้าวหมูแดงหมูกรอบ (ราดน้ำฉ่ำ)", "category": "rice", "kcal": 710, "maxNote": "หมูแดงล้วน ~560 kcal (คิดรวมหมูกรอบ+กุนเชียง)", "unit": "1 จาน", "protein": 29, "carbs": 75, "fat": 32, "sodium": 1290, "svgType": "moo_daeng", "aliases": "ข้าวหมูแดง ข้าวหมูกรอบ"}, {"id": "khao_pad_moo", "name": "ข้าวผัดหมู/ไก่/กุ้ง (ใส่ไข่)", "category": "rice", "kcal": 660, "maxNote": "ผัดน้ำมันน้อย ~520 kcal (คิดผัดไฟแรงน้ำมันจัดเต็ม)", "unit": "1 จาน", "protein": 22, "carbs": 74, "fat": 30, "sodium": 1050, "svgType": "fried_rice", "aliases": "ข้าวผัด ข้าวผัดหมู ข้าวผัดกุ้ง ข้าวผัดปู"}, {"id": "khao_pad_american", "name": "ข้าวผัดอเมริกัน (ไก่ทอด+ไส้กรอก+ไข่ดาว)", "category": "rice", "kcal": 890, "maxNote": "ชุดใหญ่ครบเครื่องไส้กรอกเบคอนไก่ทอด", "unit": "1 จาน", "protein": 34, "carbs": 86, "fat": 46, "sodium": 1540, "svgType": "fried_rice", "aliases": "ข้าวผัดอเมริกัน"}, {"id": "khao_moo_tod_kratiam", "name": "ข้าวหมูทอดกระเทียมพริกไทย (ฉ่ำน้ำมัน)", "category": "rice", "kcal": 680, "maxNote": "หมูติดมันทอดกระเทียมเจียวเน้นๆ", "unit": "1 จาน", "protein": 27, "carbs": 66, "fat": 34, "sodium": 1120, "svgType": "moo_kratiam", "aliases": "หมูกระเทียม ข้าวหมูกระเทียม หมูทอด"}, {"id": "khao_kana_moo_krob", "name": "ข้าวคะน้าหมูกรอบ", "category": "rice", "kcal": 700, "maxNote": "ผัดน้ำมันหอยหมูกรอบชิ้นหนา", "unit": "1 จาน", "protein": 23, "carbs": 66, "fat": 38, "sodium": 1280, "svgType": "kaprao", "aliases": "คะน้าหมูกรอบ ข้าวคะน้า"}, {"id": "khao_kluk_kapi", "name": "ข้าวคลุกกะปิ (ครบเครื่องหมูหวานกุนเชียง)", "category": "rice", "kcal": 650, "maxNote": "รวมหมูหวาน กุนเชียง ไข่เจียวฝอย กุ้งแห้ง", "unit": "1 จาน", "protein": 24, "carbs": 72, "fat": 29, "sodium": 1390, "svgType": "fried_rice", "aliases": "ข้าวคลุกกะปิ"}, {"id": "khao_mok_kai", "name": "ข้าวหมกไก่ (พร้อมน้ำจิ้ม+ซุป)", "category": "rice", "kcal": 690, "maxNote": "ข้าวหุงเครื่องเทศเนยและไก่ชิ้นสะโพก", "unit": "1 จาน", "protein": 30, "carbs": 74, "fat": 30, "sodium": 1100, "svgType": "khao_man_kai", "aliases": "ข้าวหมกไก่"}, {"id": "khao_na_ped", "name": "ข้าวหน้าเป็ดย่าง (หนังกรอบน้ำราดฉ่ำ)", "category": "rice", "kcal": 670, "maxNote": "เป็ดย่างติดหนังพร้อมน้ำราด", "unit": "1 จาน", "protein": 29, "carbs": 68, "fat": 31, "sodium": 1240, "svgType": "moo_daeng", "aliases": "ข้าวหน้าเป็ด เป็ดย่าง"}, {"id": "khao_pad_kaprao_talay", "name": "ข้าวผัดกะเพราทะเลรวม (กุ้ง+หมึก+ไข่ดาวเยิ้ม)", "category": "rice", "kcal": 690, "maxNote": "กะเพราทะเลผัดพริกน้ำมันรวมไข่ดาวอมน้ำมัน", "unit": "1 จาน", "protein": 31, "carbs": 67, "fat": 33, "sodium": 1310, "svgType": "kaprao_egg", "aliases": "กะเพราทะเล ข้าวผัดกะเพรา"}, {"id": "khao_moo_ob", "name": "ข้าวหมูอบ / ข้าวซี่โครงหมูอบน้ำผึ้ง", "category": "rice", "kcal": 680, "maxNote": "ซี่โครงหมูติดมันเคี่ยวซอสหวานเค็ม", "unit": "1 จาน", "protein": 28, "carbs": 70, "fat": 32, "sodium": 1180, "svgType": "kha_moo", "aliases": "ข้าวหมูอบ ซี่โครงหมู"}, {"id": "khao_kai_jiew_moo_sab", "name": "ข้าวไข่เจียวหมูสับฟูกรอบ (ราดซอสพริก)", "category": "rice", "kcal": 580, "maxNote": "ข้าวสวยร้อนๆ โปะไข่เจียวหมูสับอมน้ำมันฉ่ำ", "unit": "1 จาน", "protein": 19, "carbs": 58, "fat": 30, "sodium": 890, "svgType": "omelet", "aliases": "ข้าวไข่เจียว ไข่เจียวราดข้าว"}, {"id": "khao_pad_krapow_nuea", "name": "ข้าวผัดกะเพราเนื้อโคขุนสับ + ไข่ดาว", "category": "rice", "kcal": 740, "maxNote": "เนื้อสับติดมันผัดน้ำมันพริกกระเทียม", "unit": "1 จาน", "protein": 32, "carbs": 66, "fat": 39, "sodium": 1290, "svgType": "kaprao_egg", "aliases": "กะเพราเนื้อ เนื้อสับ"}, {"id": "joke_moo_egg", "name": "โจ๊กหมูสับใส่ไข่ + ปาท่องโก๋กรอบ", "category": "rice", "kcal": 450, "maxNote": "โจ๊กหมูล้วน ~280 kcal (คิดใส่ไข่+หมูเด้ง+หมี่กรอบ)", "unit": "1 ชาม", "protein": 22, "carbs": 52, "fat": 17, "sodium": 980, "svgType": "soup_bowl", "aliases": "โจ๊ก โจ๊กหมู"}, {"id": "khao_tom_moo", "name": "ข้าวต้มเครื่องหมูสับ/บะเต็ง/กระดูกหมู", "category": "rice", "kcal": 390, "maxNote": "ใส่กระเทียมเจียวฉ่ำ", "unit": "1 ชาม", "protein": 24, "carbs": 46, "fat": 12, "sodium": 1050, "svgType": "soup_bowl", "aliases": "ข้าวต้ม ข้าวต้มหมู"}, {"id": "pad_thai_kung", "name": "ผัดไทยกุ้งสดห่อไข่ (ผัดน้ำมัน+ถั่วลิสง)", "category": "noodle", "kcal": 690, "maxNote": "ผัดไทยธรรมดา ~550 kcal (คิดห่อไข่+ถั่ว+กุ้งสด)", "unit": "1 จาน", "protein": 24, "carbs": 78, "fat": 31, "sodium": 1260, "svgType": "pad_thai", "aliases": "ผัดไทย ผัดไท กุ้งสด"}, {"id": "pad_see_ew", "name": "ผัดซีอิ๊วหมู/ไก่ (เส้นใหญ่ผัดน้ำมัน)", "category": "noodle", "kcal": 680, "maxNote": "เส้นใหญ่อมน้ำมันผัดไฟแรงใส่ไข่", "unit": "1 จาน", "protein": 23, "carbs": 76, "fat": 32, "sodium": 1310, "svgType": "pad_thai", "aliases": "ผัดซีอิ๊ว เส้นใหญ่"}, {"id": "rad_na_moo", "name": "ราดหน้าหมูหมักเส้นใหญ่ (ใส่ไข่)", "category": "noodle", "kcal": 580, "maxNote": "เส้นใหญ่ผัดน้ำมันราดน้ำแป้งมันข้น", "unit": "1 จาน", "protein": 24, "carbs": 68, "fat": 23, "sodium": 1350, "svgType": "noodle_soup", "aliases": "ราดหน้า ราดหน้าหมู"}, {"id": "kuay_tiew_rua", "name": "ก๋วยเตี๋ยวเรือน้ำตกหมู/เนื้อ (ใส่กากหมูเจียว)", "category": "noodle", "kcal": 480, "maxNote": "ชามเล็ก ~220 kcal (คิดชามใหญ่พิเศษ+กากหมูเจียว)", "unit": "1 ชามใหญ่", "protein": 24, "carbs": 48, "fat": 21, "sodium": 1490, "svgType": "boat_noodle", "aliases": "ก๋วยเตี๋ยวเรือ เตี๋ยวเรือ น้ำตกหมู"}, {"id": "bamee_kiew_moo_daeng", "name": "บะหมี่เกี๊ยวหมูแดงหมูกรอบ (แห้งคลุกน้ำมันเจียว)", "category": "noodle", "kcal": 590, "maxNote": "บะหมี่น้ำ ~430 kcal (คิดบะหมี่แห้งคลุกกากหมู+หมูกรอบ)", "unit": "1 ชามพิเศษ", "protein": 27, "carbs": 62, "fat": 26, "sodium": 1340, "svgType": "bamee", "aliases": "บะหมี่เกี๊ยว บะหมี่หมูแดง บะหมี่หมูกรอบ"}, {"id": "yentafo_tomyum", "name": "ก๋วยเตี๋ยวเย็นตาโฟต้มยำ (เครื่องแน่น+เกี๊ยวกรอบ)", "category": "noodle", "kcal": 540, "maxNote": "เย็นตาโฟธรรมดา ~400 kcal (คิดต้มยำใส่ถั่ว+เกี๊ยวทอด)", "unit": "1 ชาม", "protein": 23, "carbs": 58, "fat": 24, "sodium": 1520, "svgType": "noodle_soup", "aliases": "เย็นตาโฟ ก๋วยเตี๋ยวต้มยำ"}, {"id": "kuay_tiew_tomyum", "name": "ก๋วยเตี๋ยวต้มยำหมูสับ/หมูเด้ง (ถั่วลิสง+กระเทียมเจียว)", "category": "noodle", "kcal": 530, "maxNote": "น้ำต้มยำพริกเผาน้ำมันถั่วลิสงจัดเต็ม", "unit": "1 ชาม", "protein": 25, "carbs": 52, "fat": 25, "sodium": 1480, "svgType": "noodle_soup", "aliases": "ก๋วยเตี๋ยวต้มยำ ต้มยำหมูสับ"}, {"id": "suki_haeng", "name": "สุกี้แห้งรวมมิตร (ผัดไข่+น้ำจิ้มสุกี้ฉ่ำ)", "category": "noodle", "kcal": 520, "maxNote": "สุกี้น้ำ ~380 kcal (คิดสุกี้แห้งผัดน้ำมันใส่ไข่)", "unit": "1 จาน", "protein": 26, "carbs": 56, "fat": 21, "sodium": 1410, "svgType": "pad_thai", "aliases": "สุกี้ สุกี้แห้ง สุกี้น้ำ"}, {"id": "kuay_jup", "name": "ก๋วยจั๊บน้ำข้น (เครื่องใน+หมูกรอบ+ไข่พะโล้)", "category": "noodle", "kcal": 620, "maxNote": "รวมหมูกรอบและไข่พะโล้เต็มชาม", "unit": "1 ชาม", "protein": 29, "carbs": 54, "fat": 32, "sodium": 1460, "svgType": "boat_noodle", "aliases": "ก๋วยจั๊บ ก๋วยจั๊บน้ำข้น"}, {"id": "hoy_tod", "name": "หอยทอด / ออส่วนกระทะร้อน (แป้งกรอบอมน้ำมัน)", "category": "noodle", "kcal": 740, "maxNote": "แป้งทอดกรอบในน้ำมันร้อนพร้อมหอยแมลงภู่/นางรม", "unit": "1 จาน", "protein": 22, "carbs": 68, "fat": 42, "sodium": 1190, "svgType": "omelet", "aliases": "หอยทอด ออส่วน"}, {"id": "mama_pad", "name": "มาม่าผัดขี้เมา / มาม่าต้มยำทรงเครื่อง (ใส่ไข่+หมูกรอบ)", "category": "noodle", "kcal": 610, "maxNote": "บะหมี่กึ่งสำเร็จรูปทอดน้ำมันพร้อมเครื่องแน่น", "unit": "1 จาน/ชาม", "protein": 21, "carbs": 66, "fat": 29, "sodium": 1680, "svgType": "bamee", "aliases": "มาม่า มาม่าผัด มาม่าต้มยำ"}, {"id": "khao_soi_kai", "name": "ข้าวซอยไก่/เนื้อ (กะทิเข้มข้น+หมี่กรอบ)", "category": "noodle", "kcal": 680, "maxNote": "น้ำแกงกะทิเข้มข้นพร้อมบะหมี่ทอดกรอบ", "unit": "1 ชาม", "protein": 28, "carbs": 64, "fat": 35, "sodium": 1380, "svgType": "noodle_soup", "aliases": "ข้าวซอย ข้าวซอยไก่"}, {"id": "kanom_jeen_namya", "name": "ขนมจีนน้ำยากะทิ / แกงเขียวหวานไก่", "category": "noodle", "kcal": 590, "maxNote": "น้ำยากะทิเข้มข้นราดขนมจีน 2 จับ", "unit": "1 จาน", "protein": 20, "carbs": 66, "fat": 27, "sodium": 1290, "svgType": "noodle_soup", "aliases": "ขนมจีน ขนมจีนน้ำยา"}, {"id": "guay_tiew_kua_kai", "name": "ก๋วยเตี๋ยวคั่วไก่ไข่อบ (ผัดน้ำมันหมู+ปาท่องโก๋กรอบ)", "category": "noodle", "kcal": 650, "maxNote": "เส้นใหญ่ผัดน้ำมันหมูหอมกระทะใส่ไก่และหมึกกรอบ", "unit": "1 จาน", "protein": 25, "carbs": 68, "fat": 31, "sodium": 1190, "svgType": "pad_thai", "aliases": "คั่วไก่ ก๋วยเตี๋ยวคั่วไก่"}, {"id": "spaghetti_kee_mao", "name": "สปาเก็ตตี้ผัดขี้เมาทะเล / ไก่กรอบ", "category": "noodle", "kcal": 640, "maxNote": "เส้นสปาเก็ตตี้ผัดน้ำมันพริกสดใบกะเพรา", "unit": "1 จาน", "protein": 26, "carbs": 70, "fat": 28, "sodium": 1280, "svgType": "pad_thai", "aliases": "สปาเก็ตตี้ขี้เมา ผัดขี้เมา"}, {"id": "somtum_thai", "name": "ส้มตำไทย (ใส่ถั่วลิสง+กุ้งแห้ง+น้ำตาลปี๊บ)", "category": "isan", "kcal": 220, "maxNote": "ตำปูปลาร้า ~120 kcal (คิดตำไทยหวานมันถั่วลิสงเยอะ)", "unit": "1 จาน", "protein": 8, "carbs": 34, "fat": 6, "sodium": 1350, "svgType": "somtum", "aliases": "ส้มตำ ส้มตำไทย ตำไทย"}, {"id": "somtum_pu_plara", "name": "ส้มตำปูปลาร้า / ตำซั่วขนมจีน", "category": "isan", "kcal": 240, "maxNote": "ตำปูปลาร้า ~120 kcal (คิดตำซั่วใส่ขนมจีน+แคบหมู)", "unit": "1 จาน", "protein": 9, "carbs": 38, "fat": 5, "sodium": 1650, "svgType": "somtum", "aliases": "ตำปูปลาร้า ส้มตำปลาร้า ตำซั่ว"}, {"id": "somtum_korn_salted_egg", "name": "ส้มตำข้าวโพดไข่เค็ม", "category": "isan", "kcal": 320, "maxNote": "หวานมันจากข้าวโพดหวาน ไข่เค็ม และถั่วลิสง", "unit": "1 จาน", "protein": 12, "carbs": 46, "fat": 10, "sodium": 1380, "svgType": "somtum", "aliases": "ตำข้าวโพด ส้มตำข้าวโพด"}, {"id": "kor_moo_yang", "name": "คอหมูย่าง (ติดมันฉ่ำ+น้ำจิ้มแจ่ว)", "category": "isan", "kcal": 490, "maxNote": "คอหมูแทรกมันย่างหอม", "unit": "1 จาน (150g)", "protein": 26, "carbs": 8, "fat": 40, "sodium": 890, "svgType": "grilled_meat", "aliases": "คอหมูย่าง หมูย่าง"}, {"id": "kai_yang", "name": "ไก่ย่างวิเชียรบุรี / ไก่ย่างหนังกรอบ (ครึ่งตัว)", "category": "isan", "kcal": 520, "maxNote": "รวมหนังไก่ย่างทาเครื่องเทศและน้ำจิ้ม", "unit": "ครึ่งตัว", "protein": 48, "carbs": 6, "fat": 33, "sodium": 980, "svgType": "grilled_meat", "aliases": "ไก่ย่าง ไก่ย่างวิเชียร"}, {"id": "larb_moo", "name": "ลาบหมู / น้ำตกคอหมูย่าง", "category": "isan", "kcal": 360, "maxNote": "ลาบหมูไร้มัน ~220 kcal (คิดน้ำตกคอหมูติดมัน+ข้าวคั่ว)", "unit": "1 จาน", "protein": 25, "carbs": 12, "fat": 24, "sodium": 1180, "svgType": "somtum", "aliases": "ลาบ ลาบหมู น้ำตกหมู"}, {"id": "tomyum_kung", "name": "ต้มยำกุ้งน้ำข้น (ใส่นมข้นจืด+น้ำพริกเผา)", "category": "curry", "kcal": 420, "maxNote": "ต้มยำน้ำใส ~180 kcal (คิดน้ำข้นพริกเผามันกุ้ง)", "unit": "1 ถ้วยใหญ่", "protein": 28, "carbs": 18, "fat": 26, "sodium": 1450, "svgType": "soup_bowl", "aliases": "ต้มยำกุ้ง ต้มยำ"}, {"id": "kaeng_kiew_wan", "name": "แกงเขียวหวานไก่/เนื้อ (กะทิแตกมัน)", "category": "curry", "kcal": 480, "maxNote": "กะทิหัวกะทิเข้มข้นแตกมัน", "unit": "1 ถ้วย", "protein": 24, "carbs": 16, "fat": 36, "sodium": 1250, "svgType": "curry_green", "aliases": "แกงเขียวหวาน เขียวหวาน"}, {"id": "panaeng_moo", "name": "พะแนงหมู / แกงมัสมั่นไก่", "category": "curry", "kcal": 530, "maxNote": "กะทิข้นหวานมันถั่วลิสงและมันฝรั่ง", "unit": "1 ถ้วย", "protein": 26, "carbs": 24, "fat": 38, "sodium": 1180, "svgType": "curry_red", "aliases": "พะแนง มัสมั่น แกงเผ็ด"}, {"id": "yum_woonsen", "name": "ยำวุ้นเส้นรวมมิตร / ยำมาม่าหมูยอกุ้งสด", "category": "isan", "kcal": 380, "maxNote": "รวมหมูสับ หมูยอ กุ้ง ปลาหมึก ถั่วลิสง", "unit": "1 จาน", "protein": 21, "carbs": 48, "fat": 11, "sodium": 1520, "svgType": "somtum", "aliases": "ยำวุ้นเส้น ยำมาม่า ยำรวมมิตร"}, {"id": "moo_ping", "name": "หมูปิ้งนมสด (ไม้ใหญ่ติดมัน 3 ไม้)", "category": "isan", "kcal": 450, "maxNote": "ไม้ละ ~150 kcal (หมูปิ้งนมสดแทรกมันฉ่ำ 3 ไม้)", "unit": "3 ไม้", "protein": 24, "carbs": 18, "fat": 31, "sodium": 840, "svgType": "skewer", "aliases": "หมูปิ้ง หมูปิ้งนมสด"}, {"id": "look_chin_tod", "name": "ลูกชิ้นทอด/ไส้กรอกแดงทอด (ราดน้ำจิ้มเหนียว)", "category": "isan", "kcal": 420, "maxNote": "ลูกชิ้นแป้งทอดน้ำมัน+น้ำจิ้มหวานข้น", "unit": "1 ชุด (3 ไม้)", "protein": 12, "carbs": 48, "fat": 20, "sodium": 1120, "svgType": "skewer", "aliases": "ลูกชิ้นทอด ลูกชิ้นปิ้ง ไส้กรอกทอด"}, {"id": "tod_mun_pla", "name": "ทอดมันปลา / ทอดมันกุ้ง (5 ชิ้นพร้อมน้ำจิ้มอาจาด)", "category": "isan", "kcal": 460, "maxNote": "ทอดในน้ำมันร้อนพร้อมน้ำจิ้มหวาน", "unit": "1 ชุด (5 ชิ้น)", "protein": 20, "carbs": 36, "fat": 26, "sodium": 1040, "svgType": "fried_chicken", "aliases": "ทอดมัน ทอดมันกุ้ง ทอดมันปลา"}, {"id": "moo_krob_dish", "name": "หมูกรอบสับจานเดี่ยว / สามชั้นทอดน้ำปลา", "category": "isan", "kcal": 640, "maxNote": "หมูสามชั้นทอดกรอบเต็มจาน", "unit": "1 จาน (160g)", "protein": 26, "carbs": 8, "fat": 56, "sodium": 1150, "svgType": "grilled_meat", "aliases": "หมูกรอบ สามชั้นทอด"}, {"id": "pla_kapong_tod_nampla", "name": "ปลากะพงทอดน้ำปลา (พร้อมยำมะม่วง)", "category": "isan", "kcal": 680, "maxNote": "ปลาทอดกรอบทั้งตัวในน้ำมันปาล์มราดซอสน้ำปลาหวาน", "unit": "1 จานใหญ่", "protein": 45, "carbs": 28, "fat": 44, "sodium": 1490, "svgType": "seafood_plate", "aliases": "ปลากะพงทอดน้ำปลา ปลาทอด"}, {"id": "tom_kha_kai", "name": "ต้มข่าไก่ (กะทิเข้มข้นใส่พริกเผา)", "category": "curry", "kcal": 450, "maxNote": "หัวกะทิเคี่ยวไก่ชิ้นสะโพกติดหนัง", "unit": "1 ถ้วย", "protein": 25, "carbs": 15, "fat": 33, "sodium": 1180, "svgType": "curry_green", "aliases": "ต้มข่าไก่ ต้มข่า"}, {"id": "kaeng_som_cha_om", "name": "แกงส้มชะอมกุ้งสด (ชะอมชุบไข่ทอดอมน้ำมัน)", "category": "curry", "kcal": 390, "maxNote": "น้ำแกงส้มแคลต่ำแต่ชะอมชุบไข่ทอดดูดน้ำมันสูง", "unit": "1 ถ้วย", "protein": 22, "carbs": 24, "fat": 23, "sodium": 1390, "svgType": "curry_yellow", "aliases": "แกงส้ม แกงส้มชะอมกุ้ง"}, {"id": "nam_prik_kapi_pla_too", "name": "ชุดน้ำพริกกะปิ + ปลาทูทอด + ชะอมไข่ทอด", "category": "isan", "kcal": 540, "maxNote": "ปลาทูทอดน้ำมัน 1 ตัวใหญ่และชะอมชุบไข่ทอด", "unit": "1 ชุด", "protein": 29, "carbs": 26, "fat": 36, "sodium": 1620, "svgType": "grilled_meat", "aliases": "น้ำพริกกะปิ ปลาทูทอด"}, {"id": "sai_krok_isan", "name": "ไส้กรอกอีสานวุ้นเส้น/หมู (ย่าง/ทอด 5 ลูกใหญ่)", "category": "isan", "kcal": 480, "maxNote": "หมูติดมันผสมข้าวและวุ้นเส้นทอดกรอบ", "unit": "1 ชุด (5 ลูก)", "protein": 18, "carbs": 32, "fat": 32, "sodium": 1120, "svgType": "skewer", "aliases": "ไส้กรอกอีสาน แหนม"}, {"id": "kaeb_moo", "name": "แคบหมูติดมัน / กากหมูเจียวกรอบ (1 ถุง)", "category": "isan", "kcal": 420, "maxNote": "หนังหมูติดมันทอดกรอบล้วน", "unit": "1 ถุง (80g)", "protein": 24, "carbs": 2, "fat": 35, "sodium": 780, "svgType": "fried_chicken", "aliases": "แคบหมู กากหมู"}, {"id": "som_tam_poo_ma", "name": "ยำปูม้าสด / ยำแซลมอนน้ำปลาร้า", "category": "isan", "kcal": 340, "maxNote": "เนื้อปูม้าและแซลมอนคลุกน้ำยำน้ำเชื่อมเคี่ยว", "unit": "1 จาน", "protein": 24, "carbs": 32, "fat": 13, "sodium": 1580, "svgType": "somtum", "aliases": "ยำปูม้า ยำแซลมอน"}, {"id": "leng_zaab", "name": "ต้มเล้งแซ่บกระดูกหมู (ชามใหญ่เนื้อติดกระดูก)", "category": "curry", "kcal": 430, "maxNote": "เนื้อหมูติดกระดูกเล้งเปื่อยยุ่ยในน้ำซุปพริกขี้หนู", "unit": "1 ชามใหญ่", "protein": 36, "carbs": 14, "fat": 26, "sodium": 1640, "svgType": "clear_soup", "aliases": "เล้งแซ่บ ต้มเล้ง"}, {"id": "kfc_crispy_chicken", "name": "ไก่ทอด KFC สูตรฮอตแอนด์สไปซี่ (ชิ้นสะโพก/อกใหญ่)", "category": "fastfood", "kcal": 360, "maxNote": "ชิ้นน่อง ~210 kcal (คิดชิ้นสะโพก/อกใหญ่แป้งกรอบ 360 kcal)", "unit": "1 ชิ้นใหญ่", "protein": 24, "carbs": 16, "fat": 23, "sodium": 860, "svgType": "fried_chicken", "aliases": "kfc เคเอฟซี ไก่ทอด ไก่kfc"}, {"id": "kfc_wing_zaab", "name": "วิงซ์แซ่บ KFC (ชุด 3 ชิ้น)", "category": "fastfood", "kcal": 390, "maxNote": "ชิ้นละ ~130 kcal (คิดชุด 3 ชิ้นคลุกผงวิงซ์แซ่บ)", "unit": "3 ชิ้น", "protein": 21, "carbs": 24, "fat": 23, "sodium": 990, "svgType": "fried_chicken", "aliases": "วิงซ์แซ่บ วิงแซ่บ kfc เคเอฟซี"}, {"id": "kfc_zinger_burger", "name": "ซิงเกอร์เบอร์เกอร์ KFC (Zinger Burger)", "category": "fastfood", "kcal": 550, "maxNote": "ไก่กรอบชิ้นใหญ่+มายองเนส+ขนมปัง", "unit": "1 ชิ้น", "protein": 26, "carbs": 48, "fat": 28, "sodium": 1120, "svgType": "burger", "aliases": "เบอร์เกอร์ ซิงเกอร์ kfc"}, {"id": "kfc_rice_bowl", "name": "ข้าวไก่แซ่บโบวล์ / ข้าวยำไก่ซี้ด KFC", "category": "fastfood", "kcal": 640, "maxNote": "ไก่ทอดหั่นชิ้นคลุกเครื่องยำพร้อมข้าวสวย", "unit": "1 ถ้วย", "protein": 27, "carbs": 74, "fat": 26, "sodium": 1340, "svgType": "kaprao", "aliases": "ข้าวไก่แซ่บ ข้าวยำไก่แซ่บ kfc"}, {"id": "kfc_mashed_potato", "name": "มันบด KFC ราดน้ำเกรวี่ (ถ้วยใหญ่)", "category": "fastfood", "kcal": 220, "maxNote": "มันฝรั่งบดเนยราดซอสเกรวี่", "unit": "1 ถ้วยใหญ่", "protein": 4, "carbs": 32, "fat": 8, "sodium": 640, "svgType": "soup_bowl", "aliases": "มันบด มันบดkfc"}, {"id": "kfc_egg_tart", "name": "ทาร์ตไข่ KFC (อบเนยแป้งพัฟกรอบ)", "category": "fastfood", "kcal": 240, "maxNote": "แป้งทาร์ตเนยสดสอดไส้คัสตาร์ดไข่หวานมัน", "unit": "1 ชิ้น", "protein": 4, "carbs": 24, "fat": 14, "sodium": 160, "svgType": "roti", "aliases": "ทาร์ตไข่ kfc"}, {"id": "pizza_pan_slice", "name": "พิซซ่าแป้งหนานุ่ม หน้าฮาวายเอี้ยน/ซีฟู้ด (ชีสเยิ้ม)", "category": "fastfood", "kcal": 380, "maxNote": "แป้งบาง ~240 kcal (คิดแป้งหนานุ่มขอบชีสถาดกลาง/ใหญ่ ต่อชิ้น)", "unit": "1 ชิ้น", "protein": 15, "carbs": 38, "fat": 19, "sodium": 780, "svgType": "pizza", "aliases": "พิซซ่า pizza ฮาวายเอี้ยน เดอะพิซซ่า พิซซ่าฮัท"}, {"id": "pizza_2_slices", "name": "พิซซ่าแป้งหนานุ่ม / ขอบชีส (จัดเต็ม 2 ชิ้น)", "category": "fastfood", "kcal": 760, "maxNote": "กิน 2 ชิ้นมาตรฐานพร้อมซอสมะเขือเทศ/ออริกาโน่", "unit": "2 ชิ้น", "protein": 30, "carbs": 76, "fat": 38, "sodium": 1560, "svgType": "pizza", "aliases": "พิซซ่า 2 ชิ้น pizza"}, {"id": "burger_double_cheese", "name": "ดับเบิ้ลชีสเบอร์เกอร์เนื้อ/หมู (McDonald's / Burger King)", "category": "fastfood", "kcal": 680, "maxNote": "เบอร์เกอร์เดี่ยว ~420 kcal (คิดดับเบิ้ลชีส+ซอสฉ่ำ)", "unit": "1 ชิ้น", "protein": 34, "carbs": 46, "fat": 40, "sodium": 1180, "svgType": "burger", "aliases": "เบอร์เกอร์ ชีสเบอร์เกอร์ แมคโดนัลด์ mcdonald"}, {"id": "french_fries_large", "name": "เฟรนช์ฟรายส์ทอดกรอบ (กล่องใหญ่ L)", "category": "fastfood", "kcal": 510, "maxNote": "กล่องเล็ก ~230 kcal (คิดกล่องใหญ่ทอดใหม่คลุกเกลือ)", "unit": "1 กล่องใหญ่", "protein": 6, "carbs": 64, "fat": 25, "sodium": 580, "svgType": "fries", "aliases": "เฟรนช์ฟรายส์ มันฝรั่งทอด แมค"}, {"id": "chicken_nuggets_6", "name": "นักเก็ตไก่ทอด (ชุด 6 ชิ้น + ซอสบาร์บีคิว)", "category": "fastfood", "kcal": 340, "maxNote": "รวมซอสดิปหวานมัน", "unit": "6 ชิ้น", "protein": 16, "carbs": 22, "fat": 21, "sodium": 690, "svgType": "fried_chicken", "aliases": "นักเก็ต นักเก็ตไก่"}, {"id": "mookata_buffet", "name": "หมูกระทะบุฟเฟต์ (สามชั้น+หมูหมัก+น้ำจิ้มสุกี้)", "category": "fastfood", "kcal": 1150, "maxNote": "กินมื้อจัดเต็มรวมสามชั้นย่างมันหมูและน้ำจิ้ม", "unit": "1 มื้ออิ่ม", "protein": 65, "carbs": 58, "fat": 72, "sodium": 2400, "svgType": "hotpot", "aliases": "หมูกระทะ บุฟเฟต์ ปิ้งย่าง"}, {"id": "shabu_suki_buffet", "name": "ชาบู / สุกี้บุฟเฟต์ (เนื้อสไลด์+ลูกชิ้นชีส+ซุปน้ำดำ)", "category": "fastfood", "kcal": 980, "maxNote": "รวมหมูสามชั้นสไลด์ เนื้อวัว ลูกชิ้นกุ้ง และน้ำจิ้มงา/พอนสึ", "unit": "1 มื้ออิ่ม", "protein": 62, "carbs": 54, "fat": 58, "sodium": 2250, "svgType": "hotpot", "aliases": "ชาบู สุกี้ ตี๋น้อย โมโม่ บุฟเฟต์"}, {"id": "ramen_tonkotsu", "name": "ราเมงทงคตสึซุปกระดูกหมูเข้มข้น (หมูชาชู+ไข่ต้ม)", "category": "fastfood", "kcal": 720, "maxNote": "ซุปกระดูกหมูเคี่ยวข้นพร้อมหมูชาชูติดมัน", "unit": "1 ชาม", "protein": 30, "carbs": 74, "fat": 34, "sodium": 1850, "svgType": "bamee", "aliases": "ราเมง ราเมน ฮะจิบัง"}, {"id": "salmon_sushi_set", "name": "ซูชิแซลมอนเบิร์นไฟ / โรลแซลมอนมายองเนส (6 คำ)", "category": "fastfood", "kcal": 540, "maxNote": "ซูชิหน้าปลาล้วน ~360 kcal (คิดเบิร์นซอสมายองเนสไข่กุ้ง)", "unit": "1 ชุด (6 คำ)", "protein": 24, "carbs": 58, "fat": 23, "sodium": 920, "svgType": "sushi", "aliases": "ซูชิ แซลมอน อาหารญี่ปุ่น"}, {"id": "spaghetti_carbonara", "name": "สปาเก็ตตี้คาโบนาร่าเบคอนกรอบ (ครีมชีสข้น)", "category": "fastfood", "kcal": 740, "maxNote": "ซอสครีมชีสเข้มข้นพร้อมเบคอนทอด", "unit": "1 จาน", "protein": 26, "carbs": 72, "fat": 39, "sodium": 1220, "svgType": "pad_thai", "aliases": "สปาเก็ตตี้ คาโบนาร่า พาสต้า"}, {"id": "korean_fried_chicken", "name": "ไก่ทอดเกาหลีเคลือบซอสการ์ลิค/เผ็ด (Bonchon 6 ชิ้น)", "category": "fastfood", "kcal": 660, "maxNote": "ไก่ทอดสองครั้งเคลือบซอสเข้มข้น", "unit": "6 ชิ้น (ไซส์ S)", "protein": 34, "carbs": 52, "fat": 35, "sodium": 1380, "svgType": "fried_chicken", "aliases": "บอนชอน ไก่เกาหลี ไก่ทอดเกาหลี"}, {"id": "steak_porkchop", "name": "สเต็กพอร์คชอป / สเต็กไก่กรอบ + เฟรนช์ฟรายส์ + ขนมปังเนย", "category": "fastfood", "kcal": 820, "maxNote": "ครบเซ็ตสเต็กซอสเกรวี่ เฟรนช์ฟรายส์ และสลัดครีม", "unit": "1 จานครบเซ็ต", "protein": 42, "carbs": 62, "fat": 45, "sodium": 1390, "svgType": "grilled_meat", "aliases": "สเต็ก พอร์คชอป ซานตาเฟ่"}, {"id": "dim_sum_set", "name": "ติ่มซำ ขนมจีบกุ้ง/หมู + ซาลาเปาไส้ครีม/หมูแดง", "category": "fastfood", "kcal": 520, "maxNote": "ขนมจีบ 4 ลูกโรยกระเทียมเจียว + ซาลาเปา 2 ลูก", "unit": "1 ชุด", "protein": 22, "carbs": 58, "fat": 22, "sodium": 1080, "svgType": "sushi", "aliases": "ติ่มซำ ขนมจีบ ซาลาเปา"}, {"id": "seven_toast_ham_cheese", "name": "แซนด์วิชแฮมชีส/ครัวซองต์แฮมชีส (อบร้อนร้านสะดวกซื้อ)", "category": "fastfood", "kcal": 360, "maxNote": "ขนมปัง/แป้งครัวซองต์สอดไส้แฮมและชีสแผ่นเยิ้ม", "unit": "1 ชิ้น", "protein": 14, "carbs": 34, "fat": 19, "sodium": 760, "svgType": "croissant", "aliases": "แซนด์วิช แฮมชีส เซเว่น"}, {"id": "boba_milk_tea", "name": "ชานมไข่มุกไต้หวัน (หวาน 100% + ไข่มุกบราวน์ชูการ์)", "category": "drink", "kcal": 460, "maxNote": "หวานน้อยไม่มุก ~180 kcal (คิดหวานปกติ+ไข่มุก/ครีมชีส)", "unit": "1 แก้ว (22 oz)", "protein": 4, "carbs": 78, "fat": 14, "sodium": 140, "svgType": "boba", "aliases": "ชานม ชานมไข่มุก ไข่มุก"}, {"id": "thai_iced_tea", "name": "ชาไทยเย็น / ชาเย็น (ใส่นมข้นหวาน+นมข้นจืดจัดเต็ม)", "category": "drink", "kcal": 380, "maxNote": "ชงสูตรร้านรถเข็น/คาเฟ่ หวานมันเข้มข้น", "unit": "1 แก้ว (22 oz)", "protein": 6, "carbs": 62, "fat": 12, "sodium": 130, "svgType": "iced_drink", "aliases": "ชาไทย ชาเย็น"}, {"id": "iced_latte_esyen", "name": "กาแฟเอสเปรสโซ่เย็น (Es-Yen สูตรไทยหวานมัน)", "category": "drink", "kcal": 360, "maxNote": "อเมริกาโน่ไม่หวาน ~15 kcal (คิดเอสเย็นใส่นมข้นหวานมัน)", "unit": "1 แก้ว", "protein": 6, "carbs": 54, "fat": 13, "sodium": 120, "svgType": "coffee_cup", "aliases": "กาแฟ กาแฟเย็น เอสเย็น ลาเต้ คาปูชิโน่"}, {"id": "matcha_latte", "name": "มัทฉะชาเขียวปั่น / ชาเขียวนมเย็น (ใส่วิปครีม)", "category": "drink", "kcal": 440, "maxNote": "ชาเขียวนมผสมวิปครีมหนานุ่ม", "unit": "1 แก้ว", "protein": 7, "carbs": 64, "fat": 17, "sodium": 150, "svgType": "matcha_drink", "aliases": "ชาเขียว มัทฉะ"}, {"id": "cocoa_iced", "name": "โกโก้เย็น / ช็อกโกแลตปั่นเข้มข้น", "category": "drink", "kcal": 450, "maxNote": "ผงโกโก้เข้มข้นผสมนมข้นหวานและนมสด", "unit": "1 แก้ว", "protein": 7, "carbs": 68, "fat": 16, "sodium": 160, "svgType": "coffee_cup", "aliases": "โกโก้ โกโก้เย็น ช็อกโกแลต"}, {"id": "cola_can", "name": "น้ำอัดลม (โค้ก / เป๊ปซี่ สูตรน้ำตาลปกติ)", "category": "drink", "kcal": 180, "maxNote": "กระป๋อง/ขวดแก้วใส่น้ำแข็ง", "unit": "1 แก้วใหญ่ (400 ml)", "protein": 0, "carbs": 45, "fat": 0, "sodium": 45, "svgType": "soda", "aliases": "โค้ก เป๊ปซี่ น้ำอัดลม"}, {"id": "fruit_smoothie", "name": "น้ำผลไม้ปั่น / สมูทตี้สตอเบอร์รี่โยเกิร์ต (เชื่อมหวาน)", "category": "drink", "kcal": 320, "maxNote": "ปั่นผสมน้ำเชื่อมเข้มข้น", "unit": "1 แก้ว", "protein": 3, "carbs": 74, "fat": 2, "sodium": 60, "svgType": "iced_drink", "aliases": "น้ำปั่น สมูทตี้ แตงโมปั่น มะม่วงปั่น"}, {"id": "beer_thai", "name": "เบียร์ / เครื่องดื่มแอลกอฮอล์ (1 ขวดใหญ่ 620 ml)", "category": "drink", "kcal": 280, "maxNote": "พลังงานจากแอลกอฮอล์และมอลต์", "unit": "1 ขวดใหญ่", "protein": 2, "carbs": 22, "fat": 0, "sodium": 25, "svgType": "soda", "aliases": "เบียร์ เหล้า ไวน์"}, {"id": "mango_sticky_rice", "name": "ข้าวเหนียวมะม่วง (ราดหัวกะทิข้น+ถั่วทอง)", "category": "dessert", "kcal": 550, "maxNote": "ข้าวเหนียวมูนกะทิหวานมันพร้อมมะม่วงสุกทั้งลูก", "unit": "1 จาน", "protein": 6, "carbs": 98, "fat": 15, "sodium": 320, "svgType": "mango_rice", "aliases": "ข้าวเหนียวมะม่วง มะม่วง"}, {"id": "durian_monthong", "name": "ทุเรียนหมอนทอง (2 พูใหญ่ เนื้อแน่นหวานมัน)", "category": "dessert", "kcal": 360, "maxNote": "1 เม็ดเล็ก ~130 kcal (คิด 2 พูใหญ่ 220g)", "unit": "2 พูใหญ่", "protein": 4, "carbs": 62, "fat": 11, "sodium": 15, "svgType": "durian", "aliases": "ทุเรียน หมอนทอง"}, {"id": "roti_condensed_milk", "name": "โรตีทอดใส่ไข่ + ราดนมข้นหวานและน้ำตาล", "category": "dessert", "kcal": 520, "maxNote": "แป้งโรตีทอดเนย/มาการีนใส่ไข่ราดนมข้นฉ่ำ", "unit": "1 แผ่นใหญ่", "protein": 9, "carbs": 66, "fat": 25, "sodium": 380, "svgType": "roti", "aliases": "โรตี โรตีใส่ไข่"}, {"id": "bingsu_toast", "name": "บิงซูสายไหม / ฮันนี่โทสต์ไอศกรีมวิปครีม", "category": "dessert", "kcal": 780, "maxNote": "ขนมปังอบเนยฉ่ำหรือน้ำแข็งไสนมพร้อมท็อปปิ้งจัดเต็ม", "unit": "1 ถ้วย/จาน", "protein": 11, "carbs": 112, "fat": 32, "sodium": 420, "svgType": "bingsu", "aliases": "บิงซู ฮันนี่โทสต์ ไอศกรีม"}, {"id": "croissant_butter", "name": "ครัวซองต์เนยสดฝรั่งเศส / ขนมปังปิ้งเนยนม", "category": "dessert", "kcal": 380, "maxNote": "แป้งพัฟชั้นเนยสดแท้ชิ้นใหญ่", "unit": "1 ชิ้นใหญ่", "protein": 7, "carbs": 42, "fat": 21, "sodium": 340, "svgType": "croissant", "aliases": "ครัวซองต์ ขนมปังปิ้ง ปังเย็น"}, {"id": "donut_glazed", "name": "โดนัทเคลือบน้ำตาล / ช็อกโกแลต (มิสเตอร์โดนัท / คริสปี้ครีม)", "category": "dessert", "kcal": 310, "maxNote": "โดนัททอดเคลือบช็อกโกแลตหรือสอดไส้ครีม", "unit": "1 ชิ้น", "protein": 4, "carbs": 38, "fat": 16, "sodium": 240, "svgType": "donut", "aliases": "โดนัท คริสปี้ครีม"}, {"id": "bua_loy_egg", "name": "บัวลอยไข่หวาน / ทับทิมกรอบน้ำกะทิ", "category": "dessert", "kcal": 420, "maxNote": "ขนมไทยน้ำกะทิหวานมันใส่ไข่หวาน", "unit": "1 ถ้วย", "protein": 8, "carbs": 66, "fat": 14, "sodium": 290, "svgType": "thai_sweet", "aliases": "บัวลอย ทับทิมกรอบ ลอดช่อง ขนมไทย"}, {"id": "kanom_krok", "name": "ขนมครกหน้ากะทิฉ่ำ (1 กล่อง 6 คู่)", "category": "dessert", "kcal": 480, "maxNote": "กะทิสดหวานมันแคะจากเตาร้อนๆ", "unit": "1 กล่อง (6 คู่)", "protein": 6, "carbs": 62, "fat": 23, "sodium": 350, "svgType": "roti", "aliases": "ขนมครก"}, {"id": "watermelon_plate", "name": "แตงโม / มะละกอ / สับปะรด (ผลไม้รถเข็น 1 ถุง)", "category": "dessert", "kcal": 110, "maxNote": "ผลไม้สดหั่นชิ้นพร้อมพริกเกลือ", "unit": "1 ถุง (200g)", "protein": 1, "carbs": 26, "fat": 0, "sodium": 280, "svgType": "mango_rice", "aliases": "แตงโม ผลไม้ มะละกอ สับปะรด"}, {"id": "ice_cream_coconut", "name": "ไอศกรีมกะทิสดทรงเครื่อง (ใส่ข้าวเหนียว+ลูกชิด+ถั่วลิสง)", "category": "dessert", "kcal": 440, "maxNote": "ไอศกรีมกะทิสดแท้พร้อมท็อปปิ้ง 3 อย่าง", "unit": "1 ถ้วยใหญ่", "protein": 6, "carbs": 56, "fat": 22, "sodium": 190, "svgType": "bingsu", "aliases": "ไอศกรีม ไอติมกะทิ ไอติม"}, {"id": "patongo_condensed_milk", "name": "ปาท่องโก๋ทอดกรอบ (3 คู่ + จิ้มนมข้นหวาน/สังขยา)", "category": "dessert", "kcal": 540, "maxNote": "แป้งทอดน้ำมันร้อนดูดซับน้ำมันสูงจิ้มนมข้น", "unit": "3 คู่", "protein": 8, "carbs": 62, "fat": 29, "sodium": 520, "svgType": "croissant", "aliases": "ปาท่องโก๋ สังขยา"}, {"id": "thai_crepe_crispy", "name": "เครปญี่ปุ่นแป้งกรอบ (พริกเผา+หมูหยอง+แฮม+ปูอัด+มายองเนส)", "category": "dessert", "kcal": 590, "maxNote": "เครปไส้แน่นราดซอสมายองเนสและซอสมะเขือเทศ", "unit": "1 ชิ้นใหญ่", "protein": 15, "carbs": 68, "fat": 29, "sodium": 980, "svgType": "roti", "aliases": "เครป เครปญี่ปุ่น"}, {"id": "kaeng_pa_moo_pa", "name": "แกงป่าหมูป่า (ติดมันหนังกรุบ+พริกแกงเผ็ดจัดจ้าน)", "category": "curry", "kcal": 380, "maxNote": "แกงป่าเนื้อล้วน ~220 kcal (คิดหมูป่าติดมันหนังกรุบผัดพริกแกงน้ำมัน)", "unit": "1 ถ้วยใหญ่", "protein": 28, "carbs": 12, "fat": 24, "sodium": 1480, "svgType": "curry_boar", "aliases": "แกงหมูป่า แกงป่าหมูป่า หมูป่า แกงป่า"}, {"id": "pad_ped_moo_pa", "name": "ผัดเผ็ดหมูป่าพริกไทยอ่อน (ผัดน้ำมันพริกแกง+กะทิหยอด)", "category": "curry", "kcal": 490, "maxNote": "หมูป่าติดมันผัดพริกแกงแดงน้ำมันและหัวกะทิเข้มข้น", "unit": "1 จาน", "protein": 29, "carbs": 14, "fat": 36, "sodium": 1520, "svgType": "curry_boar", "aliases": "ผัดเผ็ดหมูป่า แกงหมูป่า หมูป่าผัดเผ็ด"}, {"id": "khao_rad_kaeng_moo_pa", "name": "ข้าวราดแกงหมูป่า / ผัดเผ็ดหมูป่า + ไข่ดาวอมน้ำมัน", "category": "rice", "kcal": 690, "maxNote": "ข้าวสวยจานพูนราดแกงหมูป่าติดมันพร้อมไข่ดาวทอดกรอบ", "unit": "1 จานครบเซ็ต", "protein": 34, "carbs": 66, "fat": 32, "sodium": 1590, "svgType": "curry_boar", "aliases": "ข้าวแกงหมูป่า ข้าวราดแกงหมูป่า หมูป่า"}, {"id": "kaeng_kiew_wan_plakrai", "name": "แกงเขียวหวานลูกชิ้นปลากราย (กะทิแตกมัน+ยอดมะพร้าว)", "category": "curry", "kcal": 490, "maxNote": "หัวกะทิเคี่ยวแตกมันพร้อมลูกชิ้นปลากรายเหนียวนุ่ม", "unit": "1 ถ้วย", "protein": 26, "carbs": 18, "fat": 35, "sodium": 1340, "svgType": "curry_green", "aliases": "แกงเขียวหวานปลากราย ลูกชิ้นปลากราย แกงเขียวหวาน"}, {"id": "kaeng_kiew_wan_nuea", "name": "แกงเขียวหวานเนื้อติดมัน / เนื้อน่องลาย (กะทิเข้มข้น)", "category": "curry", "kcal": 540, "maxNote": "เนื้อวัวติดมันเคี่ยวกะทิสดแตกมัน", "unit": "1 ถ้วย", "protein": 28, "carbs": 16, "fat": 41, "sodium": 1320, "svgType": "curry_green", "aliases": "แกงเขียวหวานเนื้อ แกงเนื้อ"}, {"id": "kaeng_ped_ped_yang", "name": "แกงเผ็ดเป็ดย่าง (กะทิเข้มข้นใส่สับปะรด/มะเขือเทศ)", "category": "curry", "kcal": 560, "maxNote": "เป็ดย่างติดหนังในน้ำแกงเผ็ดกะทิแตกมัน", "unit": "1 ถ้วย", "protein": 27, "carbs": 22, "fat": 41, "sodium": 1390, "svgType": "curry_red", "aliases": "แกงเผ็ดเป็ดย่าง แกงเป็ด"}, {"id": "kaeng_kua_hoy_khom", "name": "แกงคั่วหอยขมใบชะพลู / แกงคั่วสับปะรดกุ้งสด", "category": "curry", "kcal": 470, "maxNote": "กะทิคั่วพริกแกงเข้มข้นใส่ใบชะพลูและชะอม", "unit": "1 ถ้วย", "protein": 22, "carbs": 18, "fat": 35, "sodium": 1360, "svgType": "crab_curry", "aliases": "แกงคั่วหอยขม แกงคั่ว หอยขม"}, {"id": "kaeng_kua_poo_bai_chaplu", "name": "แกงคั่วปูใบชะพลู (เนื้อปูก้อน+หัวกะทิข้น)", "category": "curry", "kcal": 520, "maxNote": "พริกแกงใต้เคี่ยวหัวกะทิข้นพร้อมเนื้อปูก้อน", "unit": "1 ถ้วย", "protein": 28, "carbs": 16, "fat": 39, "sodium": 1420, "svgType": "crab_curry", "aliases": "แกงคั่วปู แกงปู ใบชะพลู หมี่แกงปู"}, {"id": "kaeng_kua_sikrong_moo", "name": "แกงคั่วซี่โครงหมูอ่อน / คั่วกลิ้งหมูสับติดมัน", "category": "curry", "kcal": 480, "maxNote": "ซี่โครงหมูติดมันเคี่ยวพริกแกงใต้เข้มข้น", "unit": "1 ถ้วย", "protein": 29, "carbs": 12, "fat": 36, "sodium": 1510, "svgType": "curry_red", "aliases": "แกงคั่วซี่โครงหมู คั่วกลิ้ง แกงใต้"}, {"id": "kaeng_tai_pla", "name": "แกงไตปลาปักษ์ใต้ (ใส่ปลาย่าง+หน่อไม้+เม็ดมะม่วงหิมพานต์)", "category": "curry", "kcal": 320, "maxNote": "ไม่ใส่กะทิ ~180 kcal (คิดสูตรใส่กะทิ/เม็ดมะม่วง/ปลาทูมัน)", "unit": "1 ถ้วย", "protein": 26, "carbs": 18, "fat": 16, "sodium": 1890, "svgType": "curry_yellow", "aliases": "แกงไตปลา ไตปลา แกงใต้"}, {"id": "kaeng_luang_plakapong", "name": "แกงเหลืองปลากะพงหน่อไม้ดอง / แกงส้มใต้ยอดมะพร้าว", "category": "curry", "kcal": 310, "maxNote": "ปลากะพงชิ้นใหญ่ในน้ำแกงส้มใต้รสจัด", "unit": "1 ถ้วยใหญ่", "protein": 32, "carbs": 16, "fat": 13, "sodium": 1680, "svgType": "curry_yellow", "aliases": "แกงเหลือง แกงส้มใต้ แกงส้มปลากะพง"}, {"id": "kaeng_som_pae_sa", "name": "แกงส้มแป๊ะซะปลาช่อนทอดกรอบ (หม้อไฟชุดใหญ่)", "category": "curry", "kcal": 690, "maxNote": "ปลาช่อนตัวใหญ่ทอดน้ำมันกรอบราดน้ำแกงส้มเข้มข้น", "unit": "1 หม้อไฟ", "protein": 46, "carbs": 38, "fat": 39, "sodium": 1850, "svgType": "curry_yellow", "aliases": "แกงส้มแป๊ะซะ แกงส้มปลาช่อน"}, {"id": "kaeng_hang_lay", "name": "แกงฮังเลหมูสามชั้น (สูตรเหนือเคี่ยวน้ำมันหมูฉ่ำ)", "category": "curry", "kcal": 620, "maxNote": "หมูสามชั้นชิ้นหนาเคี่ยวเครื่องแกงฮังเลและถั่วลิสง", "unit": "1 ถ้วย", "protein": 28, "carbs": 24, "fat": 46, "sodium": 1440, "svgType": "curry_hanglay", "aliases": "แกงฮังเล ฮังเล แกงเหนือ"}, {"id": "kaeng_ho", "name": "แกงโฮะหมูสามชั้นวุ้นเส้นไส้อั่ว (อาหารเหนือ)", "category": "curry", "kcal": 480, "maxNote": "ผัดรวมแกงฮังเล หมูสามชั้น วุ้นเส้น และหน่อไม้", "unit": "1 จาน", "protein": 21, "carbs": 36, "fat": 28, "sodium": 1350, "svgType": "curry_hanglay", "aliases": "แกงโฮะ แกงแค อาหารเหนือ"}, {"id": "kaeng_om_moo_kai", "name": "แกงอ่อมหมู / แกงอ่อมไก่ติดหนัง (ใส่ผักชีลาว+ข้าวคั่ว)", "category": "curry", "kcal": 310, "maxNote": "หมู/ไก่ติดมันต้มน้ำปลาร้าและข้าวคั่วหอมๆ", "unit": "1 ถ้วย", "protein": 26, "carbs": 16, "fat": 16, "sodium": 1540, "svgType": "curry_boar", "aliases": "แกงอ่อม แกงอ่อมหมู แกงอ่อมไก่"}, {"id": "kaeng_per_normai", "name": "แกงเปรอะหน่อไม้ใบย่านาง (ใส่หมูสามชั้น+เห็ดรวม+ชะอม)", "category": "curry", "kcal": 340, "maxNote": "แกงหน่อไม้ใบย่านางใส่ข้าวเบือและหมูสามชั้น", "unit": "1 ถ้วย", "protein": 19, "carbs": 22, "fat": 20, "sodium": 1590, "svgType": "curry_green", "aliases": "แกงหน่อไม้ แกงเปรอะ แกงลาว"}, {"id": "kaeng_liang_kung", "name": "แกงเลียงกุ้งสดผักรวม (ฟักทอง+ข้าวโพดอ่อน+ใบแมงลัก)", "category": "curry", "kcal": 260, "maxNote": "แกงสุขภาพแต่คิดกรณีใส่กุ้งสดเยอะและกะปิเข้มข้น", "unit": "1 ถ้วยใหญ่", "protein": 22, "carbs": 26, "fat": 7, "sodium": 1280, "svgType": "clear_soup", "aliases": "แกงเลียง แกงเลียงกุ้งสด"}, {"id": "kaeng_thepho", "name": "แกงเทโพหมูสามชั้นผักบุ้ง (กะทิข้นหวานเค็มมัน)", "category": "curry", "kcal": 550, "maxNote": "หมูสามชั้นติดมันเคี่ยวกะทิและน้ำมะขามเปียก", "unit": "1 ถ้วย", "protein": 22, "carbs": 22, "fat": 42, "sodium": 1380, "svgType": "curry_red", "aliases": "แกงเทโพ แกงหมูเทโพ"}, {"id": "kaeng_palo_moo", "name": "ไข่พะโล้หมูสามชั้น + เต้าหู้พวง (น้ำพะโล้เคี่ยวมันหมู)", "category": "curry", "kcal": 540, "maxNote": "ไข่ต้ม 2 ฟอง + หมูสามชั้นชิ้นหนา + เต้าหู้ทอดดูดน้ำพะโล้", "unit": "1 ถ้วยใหญ่", "protein": 28, "carbs": 24, "fat": 37, "sodium": 1460, "svgType": "palo_soup", "aliases": "พะโล้ ไข่พะโล้ ต้มพะโล้ แกงพะโล้"}, {"id": "kaeng_jued_tofu_moo", "name": "แกงจืดเต้าหู้หมูสับสาหร่าย (โรยกระเทียมเจียวน้ำมัน)", "category": "curry", "kcal": 290, "maxNote": "หมูสับปั้นก้อนติดมันพร้อมเต้าหู้ไข่และกระเทียมเจียว", "unit": "1 ถ้วยใหญ่", "protein": 21, "carbs": 12, "fat": 18, "sodium": 1180, "svgType": "clear_soup", "aliases": "แกงจืด ต้มจืด แกงจืดเต้าหู้ ต้มจืดเต้าหู้หมูสับ"}, {"id": "kaeng_jued_kai_nam", "name": "แกงจืดไข่น้ำหมูสับ (ไข่เจียวทอดน้ำมันหั่นชิ้นต้มซุป)", "category": "curry", "kcal": 360, "maxNote": "ไข่เจียวทอดอมน้ำมันก่อนนำมาต้มน้ำซุปหมูสับ", "unit": "1 ถ้วย", "protein": 22, "carbs": 10, "fat": 26, "sodium": 1220, "svgType": "clear_soup", "aliases": "แกงจืดไข่น้ำ ต้มจืดไข่น้ำ ไข่น้ำ"}, {"id": "choo_chee_pla_kung", "name": "ฉู่ฉี่ปลาทูสด / ฉู่ฉี่กุ้งแม่น้ำทอด (ราดหัวกะทิพริกแกงข้น)", "category": "curry", "kcal": 510, "maxNote": "ปลา/กุ้งทอดน้ำมันราดซอสพริกแกงกะทิแตกมัน", "unit": "1 จาน", "protein": 29, "carbs": 18, "fat": 36, "sodium": 1340, "svgType": "curry_red", "aliases": "ฉู่ฉี่ แกงฉู่ฉี่ ฉู่ฉี่ปลาทู ฉู่ฉี่กุ้ง"}, {"id": "kaeng_massaman_nuea", "name": "แกงมัสมั่นเนื้อน่องลาย / มัสมั่นไก่ใส่มันฝรั่งและถั่วลิสง", "category": "curry", "kcal": 590, "maxNote": "กะทิเคี่ยวน้ำมันพริกแกงมัสมั่น ถั่วลิสง และมันฝรั่ง", "unit": "1 ถ้วยใหญ่", "protein": 31, "carbs": 28, "fat": 40, "sodium": 1290, "svgType": "curry_hanglay", "aliases": "แกงมัสมั่น มัสมั่นเนื้อ มัสมั่นไก่"}, {"id": "kaeng_kari_kai", "name": "แกงกะหรี่ไก่/หมูสามชั้นอาจาด (กะทิข้น+มันฝรั่ง) / ข้าวแกงกะหรี่หมูทอด", "category": "curry", "kcal": 760, "maxNote": "คิดค่าสูงสุดแบบราดข้าวหมูทอดทงคตสึหรือแกงกะหรี่กะทิข้น", "unit": "1 จาน/ถ้วยใหญ่", "protein": 32, "carbs": 74, "fat": 38, "sodium": 1480, "svgType": "curry_yellow", "aliases": "แกงกะหรี่ ข้าวแกงกะหรี่ กะหรี่ไก่"}, {"id": "kaeng_som_chaom_kung_rice", "name": "ข้าวราดแกงส้มชะอมกุ้ง + ไข่เจียวหมูสับ", "category": "rice", "kcal": 740, "maxNote": "ชุดยอดฮิตร้านข้าวแกงรวมไข่เจียวฟูอมน้ำมัน", "unit": "1 ชุด", "protein": 31, "carbs": 72, "fat": 37, "sodium": 1690, "svgType": "curry_yellow", "aliases": "ข้าวแกงส้ม แกงส้มไข่เจียว"}];
+
+    // =========================================================================
+    // STATE & STORAGE MANAGEMENT
+    // =========================================================================
+    const STORAGE_KEY = 'calthai_max_v2_state';
+    const TODAY_STR = '2026-10-19'; // Current local date
+
+    const MEAL_LABELS = {
+      breakfast: { name: 'มื้อเช้า', icon: '🌅', badge: 'bg-amber-100 text-amber-800' },
+      lunch:     { name: 'มื้อกลางวัน', icon: '☀️', badge: 'bg-sky-100 text-sky-800' },
+      dinner:    { name: 'มื้อเย็น', icon: '🌙', badge: 'bg-indigo-100 text-indigo-800' },
+      snack:     { name: 'ของว่าง/ดึก', icon: '🧋', badge: 'bg-purple-100 text-purple-800' }
+    };
+
+    const THAI_MONTHS_SHORT = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+
+    const SVG_PICKER_LABELS = {
+      curry_boar: 'แกงป่าหมูป่า',
+      curry_green: 'แกงเขียวหวาน',
+      curry_yellow: 'แกงเหลือง/แกงส้ม',
+      curry_red: 'แกงเผ็ด/พะแนง',
+      curry_hanglay: 'แกงฮังเล/มัสมั่น',
+      palo_soup: 'ไข่พะโล้หมูสามชั้น',
+      clear_soup: 'แกงจืด/แกงเลียง',
+      crab_curry: 'แกงคั่วปู/หอยขม',
+      kaprao_egg: 'กะเพราไข่ดาว',
+      kaprao: 'ข้าวราดผัดพริก',
+      khao_man_kai: 'ข้าวมันไก่/ข้าวหมก',
+      kha_moo: 'ข้าวขาหมู/หมูอบ',
+      moo_daeng: 'ข้าวหมูแดง/เป็ด',
+      fried_rice: 'ข้าวผัด',
+      egg_fried: 'ไข่ดาวกรอบ',
+      omelet: 'ไข่เจียว/หอยทอด',
+      egg_boiled: 'ไข่ต้ม/ไข่เค็ม',
+      pad_thai: 'ผัดไทย/ผัดซีอิ๊ว',
+      noodle_soup: 'ก๋วยเตี๋ยวต้มยำ',
+      boat_noodle: 'ก๋วยเตี๋ยวเรือ',
+      bamee: 'บะหมี่/ราเมง',
+      somtum: 'ส้มตำ/ยำแซ่บ',
+      grilled_meat: 'คอหมูย่าง/สเต็ก',
+      seafood_plate: 'ปลาทอดน้ำปลา',
+      skewer: 'หมูปิ้ง/ลูกชิ้น',
+      fried_chicken: 'ไก่ทอด KFC',
+      pizza: 'พิซซ่าชีส',
+      burger: 'เบอร์เกอร์',
+      hotpot: 'หมูกระทะ/ชาบู',
+      boba: 'ชานมไข่มุก',
+      coffee_cup: 'กาแฟ/โกโก้เย็น',
+      matcha_drink: 'มัทฉะชาเขียว',
+      mango_rice: 'ข้าวเหนียวมะม่วง',
+      thai_sweet: 'ขนมไทย/บัวลอย'
+    };
+
+    let appState = {
+      dailyGoal: 2000,
+      selectedDate: TODAY_STR,
+      activeMeal: 'lunch',
+      activeCategory: 'all',
+      statsPeriod: 'daily',
+      navBottomOffset: 54,
+      navBottomLabel: 'สูง',
+      userWeight: 68.0,
+      userHeight: 170,
+      customFoods: [],
+      days: {} // dateStr -> { items: [{uid, foodId, name, kcal, protein, carbs, fat, sodium, qty, meal, svgType, customImage, unit}], water: 0, exercises: [{name, kcal}], weight: 68.0 }
+    };
+
+    let pendingCustomImageData = '';
+    let pendingCustomSvgKey = 'curry_boar';
+    let recShuffleSeed = 0;
+
+    let trendChartInstance = null;
+    let categoryChartInstance = null;
+    let toastTimer = null;
+
+    function getAllFoods() {
+      return [...appState.customFoods, ...DEFAULT_FOODS];
+    }
+
+    function getSvgForType(svgType) {
+      return SVG_MAP[svgType] || SVG_MAP.rice_bowl;
+    }
+
+    function renderFoodThumbnail(itemOrFood) {
+      if (itemOrFood && itemOrFood.customImage) {
+        return `<img src="${itemOrFood.customImage}" alt="${itemOrFood.name || 'food'}" class="w-full h-full object-cover" />`;
+      }
+      return getSvgForType(itemOrFood ? itemOrFood.svgType : 'rice_bowl');
+    }
+
+    function formatDateOffset(baseDateStr, offsetDays) {
+      const parts = baseDateStr.split('-').map(Number);
+      const d = new Date(parts[0], parts[1] - 1, parts[2]);
+      d.setDate(d.getDate() + offsetDays);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function formatThaiDateLabel(dateStr) {
+      if (dateStr === TODAY_STR) return 'วันนี้ (19 ต.ค. 69)';
+      if (dateStr === formatDateOffset(TODAY_STR, -1)) return 'เมื่อวานนี้';
+      const parts = dateStr.split('-').map(Number);
+      if (parts.length !== 3) return dateStr;
+      const mName = THAI_MONTHS_SHORT[parts[1] - 1] || '';
+      const thaiYear = (parts[0] + 543) % 100;
+      return `${parts[2]} ${mName} ${thaiYear}`;
+    }
+
+    function createDemoHistoryData() {
+      const days = {};
+      const sampleCombos = [
+        ['kaeng_pa_moo_pa', 'rice_white', 'egg_fried_oily', 'kuay_tiew_rua', 'thai_iced_tea'],
+        ['khao_man_kai_tod', 'boba_milk_tea', 'kaeng_kiew_wan_plakrai', 'rice_white'],
+        ['joke_moo_egg', 'pad_thai_kung', 'kaeng_som_cha_om', 'rice_white', 'watermelon_plate'],
+        ['kfc_crispy_chicken', 'kfc_wing_zaab', 'pizza_pan_slice', 'cola_can', 'bamee_kiew_moo_daeng'],
+        ['khao_kha_moo', 'iced_latte_esyen', 'kaeng_hang_lay', 'rice_sticky'],
+        ['khao_moo_daeng_krob', 'somtum_pu_plara', 'kai_yang', 'kaeng_om_moo_kai', 'mango_sticky_rice'],
+        ['kuay_tiew_tomyum', 'kaeng_palo_moo', 'rice_white', 'egg_fried_oily', 'matcha_latte']
+      ];
+
+      for (let i = 365; i >= 1; i--) {
+        const dStr = formatDateOffset(TODAY_STR, -i);
+        const combo = sampleCombos[i % sampleCombos.length];
+        const items = [];
+        const meals = ['breakfast', 'lunch', 'dinner', 'snack', 'dinner'];
+        combo.forEach((fId, idx) => {
+          const found = DEFAULT_FOODS.find(f => f.id === fId);
+          if (found) {
+            items.push({
+              uid: `hist_${i}_${idx}`,
+              foodId: found.id,
+              name: found.name,
+              category: found.category,
+              kcal: found.kcal,
+              protein: found.protein,
+              carbs: found.carbs,
+              fat: found.fat,
+              sodium: found.sodium,
+              unit: found.unit,
+              svgType: found.svgType,
+              customImage: '',
+              qty: 1,
+              meal: meals[idx % meals.length]
+            });
+          }
+        });
+        const exercises = (i % 3 === 0) ? [{ name: 'เดินเร็ว 30 นาที', kcal: 150 }] : [];
+        days[dStr] = {
+          items: items,
+          water: 5 + (i % 4),
+          exercises: exercises,
+          weight: Math.round((68.0 + (i % 5) * 0.1) * 10) / 10
+        };
+      }
+
+      // Today's initial sample items including แกงป่าหมูป่า so the user immediately sees it
+      const todayStarter = [
+        { fId: 'kaeng_pa_moo_pa', meal: 'breakfast', qty: 1 },
+        { fId: 'rice_white', meal: 'breakfast', qty: 1 },
+        { fId: 'egg_fried_oily', meal: 'breakfast', qty: 1 },
+        { fId: 'pad_thai_kung', meal: 'lunch', qty: 1 }
+      ];
+      days[TODAY_STR] = {
+        items: todayStarter.map((entry, idx) => {
+          const f = DEFAULT_FOODS.find(x => x.id === entry.fId) || DEFAULT_FOODS[0];
+          return {
+            uid: `today_init_${idx}`,
+            foodId: f.id,
+            name: f.name,
+            category: f.category,
+            kcal: f.kcal,
+            protein: f.protein,
+            carbs: f.carbs,
+            fat: f.fat,
+            sodium: f.sodium,
+            unit: f.unit,
+            svgType: f.svgType,
+            customImage: '',
+            qty: entry.qty,
+            meal: entry.meal
+          };
+        }),
+        water: 4,
+        exercises: [],
+        weight: 68.0
+      };
+
+      return days;
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && parsed.days) {
+            appState = Object.assign(appState, parsed);
+            return;
+          }
+        }
+      } catch (err) {
+        // Fallback to in-memory state if localStorage is restricted
+      }
+      appState.days = createDemoHistoryData();
+      saveState();
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+      } catch (err) {
+        // Ignore storage error in restricted iframe
+      }
+    }
+
+    function ensureDayRecord(dateStr) {
+      if (!appState.days[dateStr]) {
+        appState.days[dateStr] = { items: [], water: 0, exercises: [], weight: appState.userWeight || 68.0 };
+      }
+      return appState.days[dateStr];
+    }
+
+    function showToast(msg, icon = '✅') {
+      const toast = document.getElementById('toastNotification');
+      const iconEl = document.getElementById('toastIcon');
+      const textEl = document.getElementById('toastText');
+      if (!toast || !iconEl || !textEl) return;
+      iconEl.textContent = icon;
+      textEl.textContent = msg;
+      toast.classList.remove('hidden');
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 2600);
+    }
+
+    // =========================================================================
+    // ANDROID BOTTOM NAVIGATION SAFE-AREA CLEARANCE
+    // =========================================================================
+    function applyBottomNavOffsetUI() {
+      const px = Number(appState.navBottomOffset) || 54;
+      const label = appState.navBottomLabel || 'สูง';
+      document.documentElement.style.setProperty('--nav-bottom-offset', `${px}px`);
+      const lblEl = document.getElementById('navOffsetLabel');
+      if (lblEl) lblEl.textContent = label;
+    }
+
+    function setBottomNavOffset(px, label) {
+      appState.navBottomOffset = px;
+      appState.navBottomLabel = label;
+      applyBottomNavOffsetUI();
+      saveState();
+      showToast(`ปรับความสูงแถบเมนูด้านล่างเป็นระดับ "${label}" แล้ว`, '📱');
+    }
+
+    function cycleBottomNavOffset() {
+      const current = Number(appState.navBottomOffset) || 54;
+      if (current < 40) {
+        setBottomNavOffset(54, 'สูง');
+      } else if (current < 75) {
+        setBottomNavOffset(84, 'สูงพิเศษ');
+      } else {
+        setBottomNavOffset(20, 'ปกติ');
+      }
+    }
+
+    // =========================================================================
+    // DAY TOTALS & DONUT CHART RENDERING
+    // =========================================================================
+    function getDaySummary(dateStr) {
+      const rec = ensureDayRecord(dateStr);
+      let eaten = 0, protein = 0, carbs = 0, fat = 0, sodium = 0;
+      rec.items.forEach(item => {
+        const q = Number(item.qty) || 1;
+        eaten += Math.round((Number(item.kcal) || 0) * q);
+        protein += Math.round((Number(item.protein) || 0) * q);
+        carbs += Math.round((Number(item.carbs) || 0) * q);
+        fat += Math.round((Number(item.fat) || 0) * q);
+        sodium += Math.round((Number(item.sodium) || 0) * q);
+      });
+      let burned = 0;
+      (rec.exercises || []).forEach(ex => {
+        burned += Number(ex.kcal) || 0;
+      });
+      const net = Math.max(0, eaten - burned);
+      return {
+        eaten, burned, net, protein, carbs, fat, sodium,
+        water: rec.water || 0,
+        weight: rec.weight || appState.userWeight || 68.0,
+        items: rec.items,
+        exercises: rec.exercises || []
+      };
+    }
+
+    function computeStreakDays() {
+      const goal = Number(appState.dailyGoal) || 2000;
+      let streak = 0;
+      for (let i = 0; i < 60; i++) {
+        const dStr = formatDateOffset(TODAY_STR, -i);
+        const s = getDaySummary(dStr);
+        if (s.eaten > 0 && s.eaten <= goal) {
+          streak++;
+        } else if (i > 0) {
+          break;
+        }
+      }
+      return streak;
+    }
+
+    function renderHomeDashboard() {
+      const dateStr = appState.selectedDate;
+      const summary = getDaySummary(dateStr);
+      const goal = Number(appState.dailyGoal) || 2000;
+
+      // Update Date Picker & Badges
+      const dateInput = document.getElementById('datePickerInput');
+      if (dateInput && dateInput.value !== dateStr) {
+        dateInput.value = dateStr;
+      }
+      document.getElementById('selectedDateBadge').textContent = formatThaiDateLabel(dateStr);
+      document.getElementById('goalHeaderValue').textContent = goal.toLocaleString();
+      document.getElementById('donutGoalKcal').textContent = goal.toLocaleString();
+      document.getElementById('donutConsumedKcal').textContent = summary.eaten.toLocaleString();
+      document.getElementById('statEatenKcal').textContent = summary.eaten.toLocaleString();
+      document.getElementById('statBurnedKcal').textContent = summary.burned.toLocaleString();
+      document.getElementById('statNetKcal').textContent = summary.net.toLocaleString();
+
+      // Streak Header Badge
+      const streak = computeStreakDays();
+      const streakEl = document.getElementById('streakHeaderBadge');
+      if (streakEl) {
+        streakEl.textContent = `🔥 คุมแคล ${streak} วันติด`;
+      }
+
+      // Calculate ratio based on eaten calories against daily limit
+      const ratio = summary.eaten / goal;
+      const pct = Math.round(ratio * 100);
+      const circumference = 2 * Math.PI * 78; // 490.09
+      const clampedRatio = Math.min(1, Math.max(0, ratio));
+      const dashOffset = circumference * (1 - clampedRatio);
+
+      const mainArc = document.getElementById('donutMainArc');
+      const overArc = document.getElementById('donutOverArc');
+      const statusTag = document.getElementById('donutStatusTag');
+      const remainText = document.getElementById('donutRemainText');
+      const limitBar = document.getElementById('limitColorBar');
+      const limitPctLabel = document.getElementById('limitPercentLabel');
+      const alertBanner = document.getElementById('calorieAlertBanner');
+
+      mainArc.style.strokeDashoffset = dashOffset.toFixed(2);
+      limitBar.style.width = `${Math.min(100, pct)}%`;
+      limitPctLabel.textContent = `${pct}% ของลิมิต`;
+
+      const diff = goal - summary.eaten;
+
+      if (ratio > 1) {
+        const overRatio = Math.min(1, (summary.eaten - goal) / (goal * 0.5));
+        const overCirc = 2 * Math.PI * 92; // 578.05
+        overArc.style.opacity = '1';
+        overArc.style.strokeDashoffset = (overCirc * (1 - overRatio)).toFixed(2);
+        mainArc.setAttribute('stroke', '#ef4444');
+        statusTag.textContent = '⚠️ เกินลิมิตต่อวัน!';
+        statusTag.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 mb-0.5 animate-bounce';
+        remainText.textContent = `เกินลิมิต +${Math.abs(diff).toLocaleString()} kcal`;
+        remainText.className = 'text-xs font-extrabold text-rose-600 mt-1';
+        limitBar.className = 'h-full rounded-full transition-all duration-500 bg-gradient-to-r from-amber-500 via-rose-500 to-red-700';
+        limitPctLabel.className = 'text-rose-600 font-extrabold';
+
+        const walkMins = Math.ceil(Math.abs(diff) / 5);
+        const runMins = Math.ceil(Math.abs(diff) / 9.5);
+        alertBanner.className = 'rounded-2xl p-3.5 border bg-rose-50 border-rose-300 text-rose-900 danger-pulse block';
+        alertBanner.innerHTML = `
+          <div class="flex items-start gap-2.5">
+            <span class="text-2xl leading-none">🚨</span>
+            <div class="flex-1">
+              <div class="text-xs font-extrabold text-rose-800">แจ้งเตือน: คุณกินเกินลิมิตต่อวันแล้ว +${Math.abs(diff).toLocaleString()} kcal!</div>
+              <p class="text-[11px] text-rose-700 mt-0.5">
+                แคลอรี่รวมวันนี้ <b>${summary.eaten.toLocaleString()} kcal</b> (ลิมิต ${goal.toLocaleString()} kcal) • แนะนำเดินเร็ว <b>${walkMins} นาที</b> หรือวิ่งเหยาะ <b>${runMins} นาที</b> เพื่อเผาผลาญส่วนเกิน
+              </p>
+            </div>
+            <button type="button" onclick="addExerciseBurn('เดินเบิร์นส่วนเกิน ${walkMins} นาที', ${Math.abs(diff)})" class="shrink-0 bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold px-2.5 py-1.5 rounded-xl transition">
+              🏃 เบิร์นออกทันที
+            </button>
+          </div>
+        `;
+      } else if (ratio >= 0.8) {
+        overArc.style.opacity = '0';
+        mainArc.setAttribute('stroke', '#f59e0b');
+        statusTag.textContent = '⚡ ใกล้ถึงลิมิตแล้ว';
+        statusTag.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 mb-0.5';
+        remainText.textContent = `เหลือโควตาอีก ${diff.toLocaleString()} kcal`;
+        remainText.className = 'text-xs font-bold text-amber-600 mt-1';
+        limitBar.className = 'h-full rounded-full transition-all duration-500 bg-gradient-to-r from-emerald-500 to-amber-500';
+        limitPctLabel.className = 'text-amber-600 font-bold';
+
+        alertBanner.className = 'rounded-2xl p-3 border bg-amber-50 border-amber-200 text-amber-900 block';
+        alertBanner.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="text-lg">⚠️</span>
+            <div class="text-xs">
+              <b>ใกล้เต็มลิมิตต่อวันแล้ว (${pct}%)</b> • เหลือโควตาอีก <b>${diff.toLocaleString()} kcal</b> มื้อถัดไปแนะนำแกงป่า/แกงเลียง/แกงส้ม หรือผลไม้แคลต่ำครับ
+            </div>
+          </div>
+        `;
+      } else {
+        overArc.style.opacity = '0';
+        mainArc.setAttribute('stroke', '#10b981');
+        statusTag.textContent = '🟢 อยู่ในเกณฑ์ดี';
+        statusTag.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 mb-0.5';
+        remainText.textContent = `เหลืออีก ${diff.toLocaleString()} kcal`;
+        remainText.className = 'text-xs font-bold text-emerald-600 mt-1';
+        limitBar.className = 'h-full rounded-full transition-all duration-500 bg-emerald-500';
+        limitPctLabel.className = 'text-emerald-600 font-bold';
+        alertBanner.className = 'hidden';
+        alertBanner.innerHTML = '';
+      }
+
+      // Macros progress
+      const proTarget = Math.round((goal * 0.25) / 4);
+      const carbTarget = Math.round((goal * 0.45) / 4);
+      const fatTarget = Math.round((goal * 0.30) / 9);
+
+      document.getElementById('macroProteinVal').textContent = `${summary.protein}g / ${proTarget}g`;
+      document.getElementById('macroCarbVal').textContent = `${summary.carbs}g / ${carbTarget}g`;
+      document.getElementById('macroFatVal').textContent = `${summary.fat}g / ${fatTarget}g`;
+      document.getElementById('macroSodiumText').textContent = `โซเดียม: ${summary.sodium.toLocaleString()} / 2,000 mg`;
+
+      document.getElementById('macroProteinBar').style.width = `${Math.min(100, Math.round((summary.protein / proTarget) * 100))}%`;
+      document.getElementById('macroCarbBar').style.width = `${Math.min(100, Math.round((summary.carbs / carbTarget) * 100))}%`;
+      document.getElementById('macroFatBar').style.width = `${Math.min(100, Math.round((summary.fat / fatTarget) * 100))}%`;
+
+      renderDailyLoggedList(summary.items);
+      renderWaterAndExercise(summary.water, summary.exercises, summary.burned);
+      renderSmartRecommendations(diff);
+      renderWeightCardUI(summary.weight);
+    }
+
+    function renderSmartRecommendations(remainingKcal) {
+      const subEl = document.getElementById('smartRecSubtitle');
+      const gridEl = document.getElementById('smartRecGrid');
+      if (!subEl || !gridEl) return;
+
+      const allFoods = getAllFoods();
+      let pool = [];
+
+      if (remainingKcal <= 80) {
+        subEl.textContent = 'วันนี้แคลอรี่ครบหรือเกินลิมิตแล้ว แนะนำผลไม้แคลต่ำหรือดื่มน้ำเปล่าครับ';
+        pool = allFoods.filter(f => f.kcal <= 250);
+      } else {
+        subEl.textContent = `โควตาคงเหลือ ${remainingKcal.toLocaleString()} kcal • แนะนำเมนูที่กินได้โดยไม่เกินลิมิตวันนี้`;
+        pool = allFoods.filter(f => f.kcal <= remainingKcal && f.kcal >= 100);
+        if (pool.length < 4) {
+          pool = allFoods.filter(f => f.kcal <= 400);
+        }
+      }
+
+      // Rotate recommendations using recShuffleSeed
+      const picked = [];
+      for (let i = 0; i < Math.min(4, pool.length); i++) {
+        const idx = (i * 3 + recShuffleSeed) % pool.length;
+        picked.push(pool[idx]);
+      }
+
+      gridEl.innerHTML = picked.map(f => `
+        <div class="bg-white rounded-2xl p-2.5 border border-emerald-100 flex items-center gap-2.5 shadow-sm">
+          <div class="w-10 h-10 rounded-xl overflow-hidden shrink-0 border border-slate-100">
+            ${renderFoodThumbnail(f)}
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="text-xs font-bold text-slate-800 truncate">${f.name}</div>
+            <div class="text-[10px] text-emerald-700 font-semibold">${f.kcal} kcal • โปรตีน ${f.protein}g</div>
+          </div>
+          <button type="button" onclick="logFoodById('${f.id}', 1)" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold px-2.5 py-1.5 rounded-xl shrink-0 transition">
+            + เลือก
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function shuffleSmartRecommendations() {
+      recShuffleSeed += 2;
+      const summary = getDaySummary(appState.selectedDate);
+      const diff = (Number(appState.dailyGoal) || 2000) - summary.eaten;
+      renderSmartRecommendations(diff);
+    }
+
+    function applyDietHack(hackName, savedKcal) {
+      addExerciseBurn(`✂️ ทริคลดแคล: ${hackName}`, savedKcal);
+    }
+
+    function renderWeightCardUI(weightVal) {
+      const w = Number(weightVal) || appState.userWeight || 68.0;
+      const hMeters = (Number(appState.userHeight) || 170) / 100;
+      const bmi = (w / (hMeters * hMeters)).toFixed(1);
+      let bmiLabel = 'สมส่วน';
+      if (bmi < 18.5) bmiLabel = 'น้ำหนักน้อย';
+      else if (bmi >= 23 && bmi < 25) bmiLabel = 'เริ่มท้วม';
+      else if (bmi >= 25) bmiLabel = 'เกินเกณฑ์';
+
+      const wInput = document.getElementById('dailyWeightInput');
+      if (wInput) wInput.value = w.toFixed(1);
+      const wSub = document.getElementById('weightStatusSub');
+      if (wSub) {
+        wSub.textContent = `น้ำหนักบันทึก: ${w.toFixed(1)} กก. • BMI ${bmi} (${bmiLabel})`;
+      }
+    }
+
+    function saveDailyWeight() {
+      const val = Number(document.getElementById('dailyWeightInput').value);
+      if (!val || val < 25 || val > 250) {
+        showToast('กรุณาระบุน้ำหนักระหว่าง 25 - 250 กก.', '⚠️');
+        return;
+      }
+      const rec = ensureDayRecord(appState.selectedDate);
+      rec.weight = Math.round(val * 10) / 10;
+      appState.userWeight = rec.weight;
+      saveState();
+      renderWeightCardUI(rec.weight);
+      showToast(`บันทึกน้ำหนัก ${rec.weight.toFixed(1)} กก. เรียบร้อยแล้ว`, '⚖️');
+    }
+
+    function renderDailyLoggedList(items) {
+      const container = document.getElementById('dailyLogContainer');
+      document.getElementById('logCountLabel').textContent = items.length;
+
+      if (!items.length) {
+        container.innerHTML = `
+          <div class="text-center py-6 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+            <div class="text-2xl mb-1">🍽️</div>
+            <div class="text-xs font-semibold text-slate-600">ยังไม่มีรายการอาหารที่บันทึกในวันนี้</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">พิมพ์ชื่อเมนูในช่องค้นหาด้านบน หรือกดเลือกจากหมวดหมู่อาหารได้เลย</div>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = items.map(item => {
+        const mealInfo = MEAL_LABELS[item.meal] || MEAL_LABELS.lunch;
+        const totalKcal = Math.round((item.kcal || 0) * (item.qty || 1));
+        return `
+          <div class="flex items-center gap-3 bg-slate-50 hover:bg-slate-100/80 p-2.5 rounded-2xl border border-slate-200/70 transition">
+            <div class="w-12 h-12 shrink-0 rounded-xl overflow-hidden shadow-sm border border-slate-200 bg-white">
+              ${renderFoodThumbnail(item)}
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${mealInfo.badge}">${mealInfo.icon} ${mealInfo.name}</span>
+                <span class="text-xs font-bold text-slate-800 truncate">${item.name}</span>
+              </div>
+              <div class="text-[11px] text-slate-500 mt-0.5">
+                จำนวน: <b>${item.qty} ${item.unit || 'จาน'}</b> • โปรตีน ${Math.round(item.protein * item.qty)}g • คาร์บ ${Math.round(item.carbs * item.qty)}g • ไขมัน ${Math.round(item.fat * item.qty)}g
+              </div>
+            </div>
+            <div class="text-right shrink-0">
+              <div class="text-sm font-extrabold text-emerald-700">+${totalKcal.toLocaleString()}</div>
+              <div class="text-[10px] text-slate-400">kcal</div>
+            </div>
+            <div class="flex items-center gap-1 shrink-0">
+              <button type="button" onclick="changeLoggedItemQty('${item.uid}', 0.5)" class="w-7 h-7 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-xs font-bold" title="เพิ่มครึ่งหน่วย">+½</button>
+              <button type="button" onclick="removeLoggedItem('${item.uid}')" class="w-7 h-7 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-700 text-xs font-bold" title="ลบรายการ">🗑️</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderWaterAndExercise(waterCount, exercises, burnedTotal) {
+      document.getElementById('waterCountBadge').textContent = `${waterCount} / 8 แก้ว (${waterCount * 250} ml)`;
+      const glassesRow = document.getElementById('waterGlassesRow');
+      let glassesHtml = '';
+      for (let i = 1; i <= 8; i++) {
+        const filled = i <= waterCount;
+        glassesHtml += `
+          <button type="button" onclick="setWaterDirect(${i})" class="h-8 rounded-lg flex items-center justify-center text-sm border transition ${filled ? 'bg-sky-500 text-white border-sky-600 shadow-sm' : 'bg-slate-50 text-slate-300 border-slate-200'}">
+            💧
+          </button>
+        `;
+      }
+      glassesRow.innerHTML = glassesHtml;
+
+      document.getElementById('exerciseBurnBadge').textContent = `-${burnedTotal.toLocaleString()} kcal`;
+      const exList = document.getElementById('exerciseListMini');
+      if (!exercises.length) {
+        exList.innerHTML = '<div class="text-slate-400">แตะปุ่มด้านบนเพื่อบันทึกการออกกำลังกายหรือทริคลดแคล</div>';
+      } else {
+        exList.innerHTML = exercises.map((ex, idx) => `
+          <div class="flex items-center justify-between bg-emerald-50/70 px-2.5 py-1 rounded-lg border border-emerald-100">
+            <span class="font-medium text-emerald-900">✅ ${ex.name} (-${ex.kcal} kcal)</span>
+            <button type="button" onclick="removeExercise(${idx})" class="text-rose-500 font-bold hover:underline">ลบ</button>
+          </div>
+        `).join('');
+      }
+    }
+
+    // =========================================================================
+    // SMART SINGLE-CHARACTER AUTOCOMPLETE SEARCH
+    // =========================================================================
+    function scoreFoodMatch(food, query) {
+      const q = query.trim().toLowerCase();
+      if (!q) return 1;
+      const nameL = food.name.toLowerCase();
+      const aliasL = (food.aliases || '').toLowerCase();
+      if (nameL.startsWith(q)) return 100;
+      if (aliasL.split(' ').some(w => w.startsWith(q))) return 90;
+      if (nameL.includes(q)) return 75;
+      if (aliasL.includes(q)) return 60;
+      return 0;
+    }
+
+    function highlightMatch(text, query) {
+      const q = query.trim();
+      if (!q) return text;
+      const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      return text.replace(new RegExp(`(${escaped})`, 'gi'), '<mark class="bg-amber-200 text-slate-900 rounded px-0.5">$1</mark>');
+    }
+
+    function onQuickSearchInput(rawVal) {
+      const q = (rawVal || '').trim();
+      const clearBtn = document.getElementById('btnClearSearch');
+      const resultsEl = document.getElementById('quickSearchResults');
+
+      if (q.length > 0) {
+        clearBtn.classList.remove('hidden');
+      } else {
+        clearBtn.classList.add('hidden');
+      }
+
+      const allFoods = getAllFoods();
+      let matched = [];
+
+      if (!q) {
+        // Show diverse popular dishes including แกงป่าหมูป่า, ไข่ดาวอมน้ำมัน, กะเพราหมูกรอบ, แกงเขียวหวาน
+        const featuredIds = ['kaeng_pa_moo_pa', 'egg_fried_oily', 'kaprao_moo_krob', 'kaeng_kiew_wan_plakrai', 'kfc_crispy_chicken', 'boba_milk_tea'];
+        matched = featuredIds.map(id => allFoods.find(f => f.id === id)).filter(Boolean);
+        if (matched.length < 6) matched = allFoods.slice(0, 6);
+      } else {
+        matched = allFoods
+          .map(f => ({ food: f, score: scoreFoodMatch(f, q) }))
+          .filter(x => x.score > 0)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 14)
+          .map(x => x.food);
+      }
+
+      if (!matched.length) {
+        resultsEl.innerHTML = `
+          <div class="bg-slate-50 rounded-2xl p-3 text-center border border-slate-200">
+            <div class="text-xs font-bold text-slate-700">ไม่พบเมนู "${q}" ในคลัง</div>
+            <p class="text-[11px] text-slate-500 mt-0.5">คุณสามารถกดเพิ่มเมนูนี้พร้อมใส่รูปภาพและกำหนดแคลอรี่เองได้ทันที</p>
+            <button type="button" onclick="openCustomFoodWithPrefill('${q.replace(/'/g, "\\'")}')" class="mt-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-xl">
+              ➕ เพิ่มเมนู "${q}" (ใส่รูปได้)
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      resultsEl.innerHTML = matched.map(f => `
+        <div class="flex items-center gap-3 bg-slate-50 hover:bg-emerald-50/60 p-2.5 rounded-2xl border border-slate-200/80 transition">
+          <div class="w-12 h-12 shrink-0 rounded-xl overflow-hidden shadow-sm border border-slate-200 bg-white">
+            ${renderFoodThumbnail(f)}
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="text-xs font-bold text-slate-800 leading-snug">${highlightMatch(f.name, q)}</div>
+            <div class="text-[11px] text-amber-700 font-medium mt-0.5">📌 ${f.maxNote}</div>
+            <div class="text-[10px] text-slate-400 mt-0.5">
+              1 ${f.unit} • โปรตีน ${f.protein}g • คาร์บ ${f.carbs}g • ไขมัน ${f.fat}g
+            </div>
+          </div>
+          <div class="flex flex-col items-end gap-1 shrink-0">
+            <span class="text-sm font-extrabold text-emerald-700">${f.kcal} <span class="text-[10px] font-semibold">kcal</span></span>
+            <button type="button" onclick="logFoodById('${f.id}', 1)" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-sm transition">
+              + บันทึก
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function triggerInstantSearch(term) {
+      const inp = document.getElementById('quickSearchInput');
+      inp.value = term;
+      onQuickSearchInput(term);
+      inp.focus();
+    }
+
+    function clearQuickSearch() {
+      const inp = document.getElementById('quickSearchInput');
+      inp.value = '';
+      onQuickSearchInput('');
+    }
+
+    // =========================================================================
+    // LOGGING ACTIONS & DATE NAVIGATION
+    // =========================================================================
+    function logFoodById(foodId, qty = 1) {
+      const food = getAllFoods().find(f => f.id === foodId);
+      if (!food) return;
+      const rec = ensureDayRecord(appState.selectedDate);
+      rec.items.unshift({
+        uid: 'log_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        foodId: food.id,
+        name: food.name,
+        category: food.category,
+        kcal: food.kcal,
+        protein: food.protein,
+        carbs: food.carbs,
+        fat: food.fat,
+        sodium: food.sodium,
+        unit: food.unit,
+        svgType: food.svgType,
+        customImage: food.customImage || '',
+        qty: Number(qty) || 1,
+        meal: appState.activeMeal
+      });
+      saveState();
+      renderHomeDashboard();
+      if (appState.statsPeriod) renderStatsView();
+
+      const summary = getDaySummary(appState.selectedDate);
+      if (summary.eaten > appState.dailyGoal) {
+        showToast(`บันทึก "${food.name}" (+${food.kcal * qty} kcal) — ⚠️ เกินลิมิตต่อวันแล้ว!`, '🚨');
+      } else {
+        showToast(`บันทึก "${food.name}" (+${food.kcal * qty} kcal) เรียบร้อย!`, '✅');
+      }
+    }
+
+    function changeLoggedItemQty(uid, delta) {
+      const rec = ensureDayRecord(appState.selectedDate);
+      const item = rec.items.find(x => x.uid === uid);
+      if (!item) return;
+      item.qty = Math.round((item.qty + delta) * 10) / 10;
+      saveState();
+      renderHomeDashboard();
+      showToast(`เพิ่มจำนวน "${item.name}" เป็น ${item.qty} ${item.unit}`, '🍽️');
+    }
+
+    function removeLoggedItem(uid) {
+      const rec = ensureDayRecord(appState.selectedDate);
+      const idx = rec.items.findIndex(x => x.uid === uid);
+      if (idx !== -1) {
+        const removed = rec.items.splice(idx, 1)[0];
+        saveState();
+        renderHomeDashboard();
+        showToast(`ลบ "${removed.name}" ออกจากรายการแล้ว`, '🗑️');
+      }
+    }
+
+    function setActiveMeal(mealKey) {
+      appState.activeMeal = mealKey;
+      document.querySelectorAll('.meal-pill').forEach(btn => {
+        if (btn.getAttribute('data-meal') === mealKey) {
+          btn.className = 'meal-pill flex-1 py-1.5 rounded-xl text-xs font-semibold transition bg-white text-emerald-700 shadow-sm';
+        } else {
+          btn.className = 'meal-pill flex-1 py-1.5 rounded-xl text-xs font-semibold transition text-slate-600';
+        }
+      });
+    }
+
+    function changeSelectedDate(offsetDays) {
+      appState.selectedDate = formatDateOffset(appState.selectedDate, offsetDays);
+      saveState();
+      renderHomeDashboard();
+    }
+
+    function onDateInputChange(newDateStr) {
+      if (!newDateStr) return;
+      appState.selectedDate = newDateStr;
+      saveState();
+      renderHomeDashboard();
+    }
+
+    function goToToday() {
+      appState.selectedDate = TODAY_STR;
+      saveState();
+      renderHomeDashboard();
+      showToast('กลับมาที่ข้อมูลวันนี้แล้ว', '📅');
+    }
+
+    function adjustWater(delta) {
+      const rec = ensureDayRecord(appState.selectedDate);
+      rec.water = Math.max(0, Math.min(16, (rec.water || 0) + delta));
+      saveState();
+      renderHomeDashboard();
+    }
+
+    function setWaterDirect(count) {
+      const rec = ensureDayRecord(appState.selectedDate);
+      rec.water = count;
+      saveState();
+      renderHomeDashboard();
+      showToast(`บันทึกการดื่มน้ำ ${count} แก้ว (${count * 250} ml)`, '💧');
+    }
+
+    function addExerciseBurn(name, kcal) {
+      const rec = ensureDayRecord(appState.selectedDate);
+      rec.exercises.push({ name, kcal: Number(kcal) || 100 });
+      saveState();
+      renderHomeDashboard();
+      showToast(`บันทึก "${name}" หักลบแคลอรี่ -${kcal} kcal`, '🏃‍♂️');
+    }
+
+    function removeExercise(index) {
+      const rec = ensureDayRecord(appState.selectedDate);
+      rec.exercises.splice(index, 1);
+      saveState();
+      renderHomeDashboard();
+    }
+
+    // =========================================================================
+    // TAB 2: CATEGORY BROWSER WITH COMPLETE ILLUSTRATIONS & CUSTOM PHOTOS
+    // =========================================================================
+    function renderCategoryTabs() {
+      const container = document.getElementById('categoryTabsContainer');
+      const allFoods = getAllFoods();
+      container.innerHTML = CATEGORIES.map(cat => {
+        const count = cat.id === 'all' ? allFoods.length : allFoods.filter(f => f.category === cat.id).length;
+        const active = appState.activeCategory === cat.id;
+        return `
+          <button type="button" onclick="selectCategory('${cat.id}')" class="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-2xl text-xs font-bold border transition ${active ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-emerald-50'}">
+            <span>${cat.icon}</span>
+            <span>${cat.name}</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded-full ${active ? 'bg-emerald-800 text-emerald-100' : 'bg-slate-200 text-slate-600'}">${count}</span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function selectCategory(catId) {
+      appState.activeCategory = catId;
+      renderCategoryTabs();
+      renderCatalogGrid();
+    }
+
+    function renderCatalogGrid() {
+      const searchQ = (document.getElementById('catalogSearchInput').value || '').trim();
+      const sortMode = document.getElementById('catalogSortSelect').value;
+      const grid = document.getElementById('catalogGridContainer');
+
+      let list = getAllFoods().filter(f => {
+        if (appState.activeCategory !== 'all' && f.category !== appState.activeCategory) return false;
+        if (!searchQ) return true;
+        return scoreFoodMatch(f, searchQ) > 0;
+      });
+
+      if (sortMode === 'kcal_desc') list.sort((a, b) => b.kcal - a.kcal);
+      else if (sortMode === 'kcal_asc') list.sort((a, b) => a.kcal - b.kcal);
+      else if (sortMode === 'protein_desc') list.sort((a, b) => b.protein - a.protein);
+
+      document.getElementById('catalogCountText').textContent = `แสดง ${list.length} เมนูพร้อมรูปประกอบ (ค่าแคลอรี่สูงสุด)`;
+
+      grid.innerHTML = list.map(f => {
+        const catObj = CATEGORIES.find(c => c.id === f.category) || CATEGORIES[0];
+        return `
+          <div class="bg-white rounded-3xl p-3.5 shadow-sm border border-slate-100 hover:border-emerald-200 flex gap-3 items-center transition">
+            <div class="w-16 h-16 shrink-0 rounded-2xl overflow-hidden shadow-sm border border-slate-100 bg-white">
+              ${renderFoodThumbnail(f)}
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1 mb-0.5">
+                <span class="text-[10px] font-semibold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">${catObj.icon} ${catObj.name}</span>
+                ${f.customImage ? '<span class="text-[9px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">📸 รูปของคุณ</span>' : ''}
+              </div>
+              <div class="text-xs font-bold text-slate-800 leading-snug">${highlightMatch(f.name, searchQ)}</div>
+              <div class="text-[10px] text-amber-700 font-medium mt-0.5">${f.maxNote}</div>
+              <div class="flex items-center gap-2 text-[10px] text-slate-500 mt-1">
+                <span>🥩 โปรตีน ${f.protein}g</span>
+                <span>🍚 คาร์บ ${f.carbs}g</span>
+                <span>🥑 ไขมัน ${f.fat}g</span>
+              </div>
+            </div>
+            <div class="flex flex-col items-end justify-between self-stretch shrink-0">
+              <div class="text-right">
+                <div class="text-base font-extrabold text-emerald-700">${f.kcal}</div>
+                <div class="text-[10px] text-slate-400">kcal / ${f.unit}</div>
+              </div>
+              <button type="button" onclick="logFoodById('${f.id}', 1)" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-sm transition">
+                + กินเมนูนี้
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // =========================================================================
+    // TAB 3: DAILY / MONTHLY / YEARLY CHARTS (Chart.js)
+    // =========================================================================
+    function setStatsPeriod(period) {
+      appState.statsPeriod = period;
+      ['daily', 'monthly', 'yearly'].forEach(p => {
+        const btn = document.getElementById(p === 'daily' ? 'btnPeriodDay' : p === 'monthly' ? 'btnPeriodMonth' : 'btnPeriodYear');
+        if (p === period) {
+          btn.className = 'stats-period-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 text-white shadow-sm transition';
+        } else {
+          btn.className = 'stats-period-btn px-3 py-1.5 rounded-xl text-xs font-bold text-slate-600 transition';
+        }
+      });
+      renderStatsView();
+    }
+
+    function renderStatsView() {
+      const goal = Number(appState.dailyGoal) || 2000;
+      const period = appState.statsPeriod || 'daily';
+
+      let labels = [];
+      let values = [];
+      let subtitle = '';
+
+      if (period === 'daily') {
+        subtitle = 'เปรียบเทียบ 10 วันล่าสุด (รายวัน)';
+        for (let i = 9; i >= 0; i--) {
+          const dStr = formatDateOffset(appState.selectedDate, -i);
+          const parts = dStr.split('-').map(Number);
+          labels.push(`${parts[2]} ${THAI_MONTHS_SHORT[parts[1] - 1]}`);
+          values.push(getDaySummary(dStr).eaten);
+        }
+      } else if (period === 'monthly') {
+        subtitle = 'เปรียบเทียบย้อนหลัง 30 วัน (รายเดือน)';
+        for (let i = 29; i >= 0; i--) {
+          const dStr = formatDateOffset(appState.selectedDate, -i);
+          const parts = dStr.split('-').map(Number);
+          labels.push(`${parts[2]}/${parts[1]}`);
+          values.push(getDaySummary(dStr).eaten);
+        }
+      } else {
+        subtitle = 'ค่าเฉลี่ยแคลอรี่ต่อวัน แยก 12 เดือนในรอบปี';
+        const selParts = appState.selectedDate.split('-').map(Number);
+        const baseYear = selParts[0];
+        const baseMonth = selParts[1];
+        for (let mOffset = 11; mOffset >= 0; mOffset--) {
+          let y = baseYear;
+          let m = baseMonth - mOffset;
+          while (m <= 0) { m += 12; y -= 1; }
+          labels.push(`${THAI_MONTHS_SHORT[m - 1]} ${(y + 543) % 100}`);
+          const prefix = `${y}-${String(m).padStart(2, '0')}-`;
+          const matchingDays = Object.keys(appState.days).filter(k => k.startsWith(prefix));
+          if (matchingDays.length > 0) {
+            const sum = matchingDays.reduce((acc, k) => acc + getDaySummary(k).eaten, 0);
+            values.push(Math.round(sum / matchingDays.length));
+          } else {
+            values.push(1850);
+          }
+        }
+      }
+
+      document.getElementById('chartPeriodSubtitle').textContent = subtitle;
+
+      const nonZero = values.filter(v => v > 0);
+      const avg = nonZero.length ? Math.round(nonZero.reduce((a, b) => a + b, 0) / nonZero.length) : 0;
+      const successCount = values.filter(v => v > 0 && v <= goal).length;
+      const overCount = values.filter(v => v > goal).length;
+      const unitLabel = period === 'yearly' ? 'เดือน' : 'วัน';
+
+      document.getElementById('statsAvgKcal').textContent = `${avg.toLocaleString()} kcal`;
+      document.getElementById('statsAvgSub').textContent = avg <= goal ? '🟢 ต่ำกว่าลิมิตเฉลี่ย' : '🔴 สูงกว่าลิมิตเฉลี่ย';
+      document.getElementById('statsAvgSub').className = avg <= goal ? 'text-[10px] text-emerald-600 font-semibold' : 'text-[10px] text-rose-600 font-semibold';
+      document.getElementById('statsSuccessDays').textContent = `${successCount} ${unitLabel}`;
+      document.getElementById('statsOverDays').textContent = `${overCount} ${unitLabel}`;
+
+      const barColors = values.map(v => v > goal ? '#f43f5e' : '#10b981');
+      const goalLine = values.map(() => goal);
+
+      const ctx = document.getElementById('historyTrendChart');
+      if (ctx && typeof Chart !== 'undefined') {
+        if (trendChartInstance) trendChartInstance.destroy();
+        trendChartInstance = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                type: 'line',
+                label: 'ลิมิตต่อวัน (kcal)',
+                data: goalLine,
+                borderColor: '#f59e0b',
+                borderWidth: 2,
+                borderDash: [6, 4],
+                pointRadius: 0,
+                fill: false,
+                order: 0
+              },
+              {
+                type: 'bar',
+                label: 'แคลอรี่ที่กิน (kcal)',
+                data: values,
+                backgroundColor: barColors,
+                borderRadius: 6,
+                order: 1
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    const val = context.parsed.y;
+                    if (context.dataset.type === 'line') return `ลิมิต: ${val.toLocaleString()} kcal`;
+                    const diff = val - goal;
+                    return diff > 0
+                      ? `${val.toLocaleString()} kcal (เกินลิมิต +${diff.toLocaleString()})`
+                      : `${val.toLocaleString()} kcal (ไม่เกินลิมิต)`;
+                  }
+                }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                grid: { color: '#e2e8f0' },
+                ticks: { font: { size: 10 } }
+              },
+              x: {
+                grid: { display: false },
+                ticks: { font: { size: 10 }, maxRotation: 45 }
+              }
+            }
+          }
+        });
+      }
+
+      renderCategoryPieChart();
+      renderHistoricalDaysList();
+    }
+
+    function renderCategoryPieChart() {
+      const catTotals = {};
+      CATEGORIES.forEach(c => { if (c.id !== 'all') catTotals[c.id] = 0; });
+
+      for (let i = 0; i < 14; i++) {
+        const dStr = formatDateOffset(appState.selectedDate, -i);
+        const rec = ensureDayRecord(dStr);
+        rec.items.forEach(item => {
+          const cat = item.category || 'rice';
+          catTotals[cat] = (catTotals[cat] || 0) + Math.round((item.kcal || 0) * (item.qty || 1));
+        });
+      }
+
+      const activeCats = CATEGORIES.filter(c => c.id !== 'all');
+      const labels = activeCats.map(c => `${c.icon} ${c.name}`);
+      const dataVals = activeCats.map(c => catTotals[c.id] || 0);
+      const colors = activeCats.map(c => c.color);
+
+      const ctx = document.getElementById('categoryBreakdownChart');
+      if (ctx && typeof Chart !== 'undefined') {
+        if (categoryChartInstance) categoryChartInstance.destroy();
+        categoryChartInstance = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: labels,
+            datasets: [{
+              data: dataVals,
+              backgroundColor: colors,
+              borderWidth: 2,
+              borderColor: '#ffffff'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '58%',
+            plugins: {
+              legend: {
+                position: 'right',
+                labels: { boxWidth: 12, font: { size: 11 } }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    function renderHistoricalDaysList() {
+      const container = document.getElementById('historyDaysList');
+      const goal = Number(appState.dailyGoal) || 2000;
+      let html = '';
+      for (let i = 0; i < 14; i++) {
+        const dStr = formatDateOffset(TODAY_STR, -i);
+        const sum = getDaySummary(dStr);
+        const isOver = sum.eaten > goal;
+        const pct = Math.min(100, Math.round((sum.eaten / goal) * 100));
+        html += `
+          <div onclick="jumpToHistoryDate('${dStr}')" class="cursor-pointer flex items-center justify-between p-2.5 rounded-2xl border transition ${dStr === appState.selectedDate ? 'bg-emerald-50 border-emerald-400' : 'bg-slate-50 hover:bg-slate-100 border-slate-200/70'}">
+            <div class="flex items-center gap-2.5">
+              <span class="w-2.5 h-2.5 rounded-full ${isOver ? 'bg-rose-500' : 'bg-emerald-500'}"></span>
+              <div>
+                <div class="text-xs font-bold text-slate-800">${formatThaiDateLabel(dStr)}</div>
+                <div class="text-[10px] text-slate-500">${sum.items.length} เมนู • น้ำ ${sum.water} แก้ว</div>
+              </div>
+            </div>
+            <div class="text-right">
+              <div class="text-xs font-extrabold ${isOver ? 'text-rose-600' : 'text-emerald-700'}">
+                ${sum.eaten.toLocaleString()} / ${goal.toLocaleString()} kcal (${pct}%)
+              </div>
+              <div class="text-[10px] ${isOver ? 'text-rose-500 font-semibold' : 'text-slate-400'}">
+                ${isOver ? `⚠️ เกินลิมิต +${(sum.eaten - goal).toLocaleString()} kcal` : '✅ อยู่ในลิมิต'}
+              </div>
+            </div>
+          </div>
+        `;
+      }
+      container.innerHTML = html;
+    }
+
+    function jumpToHistoryDate(dateStr) {
+      appState.selectedDate = dateStr;
+      saveState();
+      switchTab('home');
+      showToast(`เปิดดูข้อมูลย้อนหลังวันที่ ${formatThaiDateLabel(dateStr)}`, '🗓️');
+    }
+
+    // =========================================================================
+    // TAB 4: GOAL SETTINGS, TDEE CALCULATOR & CUSTOM FOOD PHOTO UPLOAD MODAL
+    // =========================================================================
+    function saveDailyGoalFromInput() {
+      const val = Number(document.getElementById('manualGoalInput').value);
+      if (!val || val < 800 || val > 6000) {
+        showToast('กรุณาระบุแคลอรี่ระหว่าง 800 - 6,000 kcal', '⚠️');
+        return;
+      }
+      appState.dailyGoal = Math.round(val);
+      saveState();
+      renderHomeDashboard();
+      showToast(`ตั้งค่าลิมิตแคลอรี่ต่อวันเป็น ${appState.dailyGoal.toLocaleString()} kcal แล้ว`, '🎯');
+    }
+
+    function setQuickGoal(kcalVal) {
+      document.getElementById('manualGoalInput').value = kcalVal;
+      appState.dailyGoal = kcalVal;
+      saveState();
+      renderHomeDashboard();
+      showToast(`เปลี่ยนลิมิตต่อวันเป็น ${kcalVal.toLocaleString()} kcal เรียบร้อย`, '🎯');
+    }
+
+    function calculateAndApplyTdee() {
+      const gender = document.getElementById('calcGender').value;
+      const age = Number(document.getElementById('calcAge').value) || 28;
+      const weight = Number(document.getElementById('calcWeight').value) || 65;
+      const height = Number(document.getElementById('calcHeight').value) || 170;
+      const activity = Number(document.getElementById('calcActivity').value) || 1.375;
+      const goalDelta = Number(document.getElementById('calcGoalMode').value) || 0;
+
+      let bmr = (10 * weight) + (6.25 * height) - (5 * age);
+      bmr += (gender === 'male') ? 5 : -161;
+      const tdee = Math.round(bmr * activity);
+      const target = Math.max(1000, Math.round((tdee + goalDelta) / 10) * 10);
+
+      appState.dailyGoal = target;
+      appState.userWeight = weight;
+      appState.userHeight = height;
+      document.getElementById('manualGoalInput').value = target;
+      saveState();
+      renderHomeDashboard();
+
+      const resBox = document.getElementById('tdeeResultBox');
+      resBox.classList.remove('hidden');
+      resBox.innerHTML = `
+        <div class="font-bold text-emerald-800 mb-1">✅ คำนวณสำเร็จและตั้งค่าลิมิตใหม่แล้ว!</div>
+        <div>พลังงานพื้นฐาน (BMR): <b>${Math.round(bmr).toLocaleString()} kcal/วัน</b></div>
+        <div>พลังงานที่ใช้จริงต่อวัน (TDEE): <b>${tdee.toLocaleString()} kcal/วัน</b></div>
+        <div class="text-emerald-700 font-bold mt-1">🎯 ลิมิตแคลอรี่ที่แนะนำสำหรับคุณ: ${target.toLocaleString()} kcal/วัน</div>
+      `;
+      showToast(`ตั้งลิมิตตามค่า TDEE ของคุณ: ${target.toLocaleString()} kcal/วัน`, '⚡');
+    }
+
+    // --- Custom Food Photo & SVG Icon Picker ---
+    function updateCustomModalImagePreview() {
+      const previewEl = document.getElementById('customFoodImagePreview');
+      const clearBtn = document.getElementById('btnClearCustomPhoto');
+      if (!previewEl) return;
+
+      if (pendingCustomImageData) {
+        previewEl.innerHTML = `<img src="${pendingCustomImageData}" alt="Preview" class="w-full h-full object-cover" />`;
+        if (clearBtn) clearBtn.classList.remove('hidden');
+      } else {
+        previewEl.innerHTML = getSvgForType(pendingCustomSvgKey);
+        if (clearBtn) clearBtn.classList.add('hidden');
+      }
+    }
+
+    function renderCustomFoodSvgPicker() {
+      const pickerEl = document.getElementById('customFoodSvgPicker');
+      if (!pickerEl) return;
+      const keys = Object.keys(SVG_PICKER_LABELS);
+      pickerEl.innerHTML = keys.map(k => {
+        const isSelected = (!pendingCustomImageData && pendingCustomSvgKey === k);
+        return `
+          <button type="button" onclick="selectCustomSvgIcon('${k}')" title="${SVG_PICKER_LABELS[k]}" class="p-1 rounded-xl border-2 transition flex flex-col items-center ${isSelected ? 'border-emerald-600 bg-emerald-50 scale-105' : 'border-transparent hover:border-slate-200'}">
+            <div class="w-9 h-9 rounded-lg overflow-hidden">${getSvgForType(k)}</div>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function selectCustomSvgIcon(svgKey) {
+      pendingCustomImageData = '';
+      pendingCustomSvgKey = svgKey;
+      const fileInp = document.getElementById('customFoodPhotoInput');
+      if (fileInp) fileInp.value = '';
+      updateCustomModalImagePreview();
+      renderCustomFoodSvgPicker();
+    }
+
+    function onCustomCatChange(catVal) {
+      if (pendingCustomImageData) return;
+      const defaultSvgByCat = {
+        curry: 'curry_boar',
+        rice: 'kaprao_egg',
+        noodle: 'pad_thai',
+        isan: 'somtum',
+        fastfood: 'pizza',
+        drink: 'boba',
+        dessert: 'mango_rice'
+      };
+      pendingCustomSvgKey = defaultSvgByCat[catVal] || 'curry_boar';
+      updateCustomModalImagePreview();
+      renderCustomFoodSvgPicker();
+    }
+
+    function handleCustomPhotoUpload(event) {
+      const file = event && event.target && event.target.files && event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          // Resize & center-crop to 160x160 JPEG so it stores cleanly in localStorage
+          const canvas = document.createElement('canvas');
+          const size = 160;
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext('2d');
+          const minSide = Math.min(img.width, img.height);
+          const sx = (img.width - minSide) / 2;
+          const sy = (img.height - minSide) / 2;
+          ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
+          pendingCustomImageData = canvas.toDataURL('image/jpeg', 0.82);
+          updateCustomModalImagePreview();
+          renderCustomFoodSvgPicker();
+          showToast('อัปโหลดรูปภาพอาหารเรียบร้อยแล้ว!', '📸');
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function clearCustomUploadedPhoto() {
+      pendingCustomImageData = '';
+      const fileInp = document.getElementById('customFoodPhotoInput');
+      if (fileInp) fileInp.value = '';
+      updateCustomModalImagePreview();
+      renderCustomFoodSvgPicker();
+    }
+
+    function openCustomFoodModal() {
+      pendingCustomImageData = '';
+      pendingCustomSvgKey = 'curry_boar';
+      updateCustomModalImagePreview();
+      renderCustomFoodSvgPicker();
+      document.getElementById('customFoodModal').classList.remove('hidden');
+    }
+
+    function openCustomFoodWithPrefill(nameStr) {
+      pendingCustomImageData = '';
+      pendingCustomSvgKey = 'curry_boar';
+      document.getElementById('customFoodName').value = nameStr;
+      updateCustomModalImagePreview();
+      renderCustomFoodSvgPicker();
+      document.getElementById('customFoodModal').classList.remove('hidden');
+    }
+
+    function closeCustomFoodModal() {
+      document.getElementById('customFoodModal').classList.add('hidden');
+    }
+
+    function saveCustomFoodItem() {
+      const name = (document.getElementById('customFoodName').value || '').trim();
+      const kcal = Number(document.getElementById('customFoodKcal').value) || 0;
+      const cat = document.getElementById('customFoodCat').value || 'curry';
+      const pro = Number(document.getElementById('customFoodPro').value) || 20;
+      const carb = Number(document.getElementById('customFoodCarb').value) || 35;
+      const fat = Number(document.getElementById('customFoodFat').value) || 20;
+
+      if (!name || kcal <= 0) {
+        showToast('กรุณากรอกชื่อเมนูและแคลอรี่ให้ครบถ้วน', '⚠️');
+        return;
+      }
+
+      const newFood = {
+        id: 'custom_' + Date.now(),
+        name: name,
+        category: cat,
+        kcal: Math.round(kcal),
+        maxNote: pendingCustomImageData ? 'เมนูของคุณพร้อมรูปถ่ายจริง (ค่าแคลอรี่สูงสุด)' : 'เมนูที่คุณเพิ่มเอง (ค่าแคลอรี่สูงสุด)',
+        unit: '1 จาน/ถ้วย',
+        protein: pro,
+        carbs: carb,
+        fat: fat,
+        sodium: 700,
+        svgType: pendingCustomSvgKey || 'curry_boar',
+        customImage: pendingCustomImageData || '',
+        aliases: name
+      };
+
+      appState.customFoods.unshift(newFood);
+      saveState();
+      closeCustomFoodModal();
+      logFoodById(newFood.id, 1);
+      renderCategoryTabs();
+      renderCatalogGrid();
+      onQuickSearchInput(document.getElementById('quickSearchInput').value);
+      document.getElementById('customFoodName').value = '';
+      document.getElementById('customFoodKcal').value = '';
+    }
+
+    function openApkModal() {
+      document.getElementById('apkGuideModal').classList.remove('hidden');
+    }
+
+    function closeApkModal() {
+      document.getElementById('apkGuideModal').classList.add('hidden');
+    }
+
+    function exportUserData() {
+      const dataStr = JSON.stringify(appState, null, 2);
+      const blob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `calthai_backup_${appState.selectedDate}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('ดาวน์โหลดไฟล์สำรองข้อมูลเรียบร้อยแล้ว', '📤');
+    }
+
+    function resetToDemoData() {
+      appState.days = createDemoHistoryData();
+      appState.selectedDate = TODAY_STR;
+      saveState();
+      renderHomeDashboard();
+      renderStatsView();
+      showToast('รีเซ็ตข้อมูลตัวอย่างย้อนหลัง 1 ปีเรียบร้อยแล้ว', '🔄');
+    }
+
+    function switchTab(tabId) {
+      ['home', 'menu', 'stats', 'settings'].forEach(t => {
+        const sec = document.getElementById('view-' + t);
+        const nav = document.getElementById('nav-' + t);
+        const topNav = document.getElementById('top-nav-' + t);
+        if (t === tabId) {
+          sec.classList.add('active');
+          nav.className = 'nav-btn flex flex-col items-center justify-center py-1 px-3 rounded-2xl text-emerald-600 font-bold bg-emerald-50/90 transition';
+          if (topNav) topNav.className = 'top-nav-btn py-1 rounded-xl text-[11px] font-bold bg-white text-emerald-800 shadow-sm transition';
+        } else {
+          sec.classList.remove('active');
+          nav.className = 'nav-btn flex flex-col items-center justify-center py-1 px-3 rounded-2xl text-slate-500 font-medium transition';
+          if (topNav) topNav.className = 'top-nav-btn py-1 rounded-xl text-[11px] font-medium text-emerald-100 hover:bg-white/10 transition';
+        }
+      });
+      if (tabId === 'menu') {
+        renderCategoryTabs();
+        renderCatalogGrid();
+      } else if (tabId === 'stats') {
+        renderStatsView();
+      } else if (tabId === 'home') {
+        renderHomeDashboard();
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function toggleShellWidth() {
+      const shell = document.getElementById('appShell');
+      const nav = document.getElementById('bottomNavBar');
+      shell.classList.toggle('wide-mode');
+      if (shell.classList.contains('wide-mode')) {
+        nav.style.maxWidth = '920px';
+      } else {
+        nav.style.maxWidth = '456px';
+      }
+      if (trendChartInstance) trendChartInstance.resize();
+      if (categoryChartInstance) categoryChartInstance.resize();
+    }
+
+    // Initialize Application
+    window.addEventListener('DOMContentLoaded', () => {
+      loadState();
+      applyBottomNavOffsetUI();
+      document.getElementById('manualGoalInput').value = appState.dailyGoal;
+      setActiveMeal(appState.activeMeal || 'lunch');
+      renderHomeDashboard();
+      onQuickSearchInput('');
+      renderCategoryTabs();
+      renderCatalogGrid();
+    });
+
+  </script>
+</body>
+</html>
